@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -36,6 +37,8 @@ namespace JsonTo2AScenario
             public List<ObjectPlacement> sceneryPlacements { get; set; }
             public List<ObjectDefinition> vehicleDefinitions { get; set; }
             public List<ObjectPlacement> vehiclePlacements { get; set; }
+            public List<ObjectDefinition> equipmentDefinitions { get; set; }
+            public List<ObjectPlacement> equipmentPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -309,6 +312,75 @@ namespace JsonTo2AScenario
 
                     // Set tag type
                     ((TagFieldEnum)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = 1;
+
+                    i++;
+                }
+
+                // EQUIPMENT //
+
+                // Reach equipment tag paths need to be translated to H2A equipment tag paths
+                Dictionary<string, string> equipmentMapping = new Dictionary<string, string>()
+                {
+                    { "objects\\multi\\powerups\\powerup_blue\\powerup_blue", "objects\\multi\\powerups\\h2a_activecamo_blue\\h2a_activecamo" },
+                    { "objects\\multi\\powerups\\powerup_red\\powerup_red", "objects\\multi\\powerups\\h2a_overshield_yellow\\h2a_overshield"},
+                    { "objects\\weapons\\grenade\\frag_grenade\\frag_grenade", "objects\\weapons\\h2a_frag_grenade\\h2a_frag_grenade"},
+                    { "objects\\weapons\\grenade\\plasma_grenade\\plasma_grenade", "objects\\weapons\\h2a_plasma_grenade\\h2a_plasma_grenade" },
+                    { "objects\\equipment\\bubbleshield_module\\bubbleshield_module", "objects\\multi\\powerups\\ord_damage\\ord_damage" }
+                };
+
+                // Output deserialized data
+                Console.WriteLine("\n\n--- EQUIPMENT DEFINITIONS ---");
+                ((TagFieldBlock)tagFile.SelectField("Block:equipment palette")).RemoveAllElements();
+                ((TagFieldBlock)tagFile.SelectField("Block:equipment")).RemoveAllElements();
+                i = 0;
+                foreach (var def in container.equipmentDefinitions)
+                {
+                    Console.WriteLine($"Equipment definition {i}: \n\tTag: {def.tag}");
+                    ((TagFieldBlock)tagFile.SelectField("Block:equipment palette")).AddElement();
+
+                    // Set equipment tag path
+                    try
+                    {
+                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(equipmentMapping[def.tag], "equipment");
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        Console.WriteLine($"\nKey not found in equipment mapping dict for {def.tag}, using Reach path");
+                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, "equipment");
+                    }
+                    i++;
+                }
+
+                Console.WriteLine("\n\n--- EQUIPMENT PLACEMENTS ---");
+                i = 0;
+                foreach (var eqip in container.equipmentPlacements)
+                {
+                    Console.WriteLine($"Equipment Placement {i}: \n\tType: {eqip.typeIndex} \n\tName: {eqip.nameIndex} \n\tFlags: {eqip.flags} \n\tPosition: {eqip.position[0]}, {eqip.position[1]}, {eqip.position[2]} \n\tRotation: {eqip.rotation[0]}, {eqip.rotation[1]}, {eqip.rotation[2]} \n\tScale: {eqip.scale} \n\tTeam: {eqip.ownerTeam}");
+                    ((TagFieldBlock)tagFile.SelectField("Block:equipment")).AddElement();
+
+                    // Set type
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:equipment[{i}]/ShortBlockIndex:type")).Value = eqip.typeIndex;
+
+                    // Set name
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:equipment[{i}]/ShortBlockIndex:name")).Value = eqip.nameIndex;
+
+                    // Set flags
+                    ((TagFieldFlags)tagFile.SelectField($"Block:equipment[{i}]/Struct:object data/Flags:placement flags")).RawValue = eqip.flags;
+
+                    // Set position
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:equipment[{i}]/Struct:object data/RealPoint3d:position")).Data = eqip.position;
+
+                    // Set rotation
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:equipment[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data = eqip.rotation;
+
+                    // Set scale
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:equipment[{i}]/Struct:object data/Real:scale")).Data = eqip.scale;
+
+                    // Set team
+                    ((TagFieldEnum)tagFile.SelectField($"Block:equipment[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = eqip.ownerTeam;
+
+                    // Set tag type
+                    ((TagFieldEnum)tagFile.SelectField($"Block:equipment[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = 3;
 
                     i++;
                 }

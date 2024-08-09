@@ -40,6 +40,8 @@ namespace Reach2AObjConverter
             public List<ObjectPlacement> sceneryPlacements { get; set; }
             public List<ObjectDefinition> vehicleDefinitions { get; set; }
             public List<ObjectPlacement> vehiclePlacements { get; set; }
+            public List<ObjectDefinition> equipmentDefinitions { get; set; }
+            public List<ObjectPlacement> equipmentPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -144,6 +146,8 @@ namespace Reach2AObjConverter
             List<ObjectPlacement> scenPlaceData = new List<ObjectPlacement>();
             List<ObjectDefinition> vehiDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> vehiPlaceData = new List<ObjectPlacement>();
+            List<ObjectDefinition> eqipDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> eqipPlaceData = new List<ObjectPlacement>();
 
             try
             {
@@ -157,6 +161,10 @@ namespace Reach2AObjConverter
                 // VEHICLES //
                 vehiDefData = GetObjectData(tagFile, "vehicles").definitions;
                 vehiPlaceData = GetObjectData(tagFile, "vehicles").placements;
+
+                // EQUIPMENT //
+                eqipDefData = GetObjectData(tagFile, "equipment").definitions;
+                eqipPlaceData = GetObjectData(tagFile, "equipment").placements;
             }
             catch
             {
@@ -173,7 +181,9 @@ namespace Reach2AObjConverter
                     sceneryDefinitions = scenDefData,
                     sceneryPlacements = scenPlaceData,
                     vehicleDefinitions = vehiDefData,
-                    vehiclePlacements = vehiPlaceData
+                    vehiclePlacements = vehiPlaceData,
+                    equipmentDefinitions = eqipDefData,
+                    equipmentPlacements = eqipPlaceData
                 };
 
                 // Serialize to JSON
@@ -213,7 +223,7 @@ namespace Reach2AObjConverter
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).Elements.Count();
             }
             
-            // Get all scenery definition data
+            // Get all object definition data
             for (int i = 0; i < objDefCount; i++)
             {
                 ObjectDefinition objDef = new ObjectDefinition();
@@ -267,10 +277,13 @@ namespace Reach2AObjConverter
                 Console.WriteLine($"\tScale: {scale}");
                 objPlacement.scale = scale;
 
-                string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data;
-                Console.WriteLine($"\tVariant name: {variant}");
-                objPlacement.variantName = variant;
-
+                if (objectType != "equipment")
+                {
+                    string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data;
+                    Console.WriteLine($"\tVariant name: {variant}");
+                    objPlacement.variantName = variant;
+                }
+                
                 int team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
                 Console.WriteLine($"\tOwner team: {team}\n");
                 objPlacement.ownerTeam = team;

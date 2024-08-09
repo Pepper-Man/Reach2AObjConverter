@@ -13,12 +13,12 @@ namespace JsonTo2AScenario
 {
     internal class JsonTo2AScenario
     {
-        public class SceneryDefinition
+        public class ObjectDefinition
         {
             public string tag { get; set; }
         }
 
-        public class SceneryPlacement
+        public class ObjectPlacement
         {
             public int typeIndex { get; set; }
             public int nameIndex { get; set; }
@@ -30,11 +30,12 @@ namespace JsonTo2AScenario
             public int ownerTeam { get; set; }
         }
 
-
         public class ObjectDataContainer
         {
-            public List<SceneryDefinition> sceneryDefinitions { get; set; }
-            public List<SceneryPlacement> sceneryPlacements { get; set; }
+            public List<ObjectDefinition> sceneryDefinitions { get; set; }
+            public List<ObjectPlacement> sceneryPlacements { get; set; }
+            public List<ObjectDefinition> vehicleDefinitions { get; set; }
+            public List<ObjectPlacement> vehiclePlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -189,7 +190,7 @@ namespace JsonTo2AScenario
                 int i = 0;
                 foreach (var def in container.sceneryDefinitions)
                 {
-                    Console.WriteLine($"Light Definition {i}: \n\tTag: {def.tag}");
+                    Console.WriteLine($"Scenery definition {i}: \n\tTag: {def.tag}");
                     ((TagFieldBlock)tagFile.SelectField("Block:scenery palette")).AddElement();
 
                     // Set scenery tag path
@@ -232,7 +233,83 @@ namespace JsonTo2AScenario
                     // Set tag type
                     ((TagFieldEnum)tagFile.SelectField($"Block:scenery[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = 6;
 
-                    // Set source
+                    i++;
+                }
+
+                // VEHICLES //
+
+                // Reach vehicle tag paths need to be translated to H2A vehicle tag paths
+                Dictionary<string, string> vehicleMapping = new Dictionary<string, string>()
+                {
+                    { "objects\\vehicles\\covenant\\banshee\\banshee", "objects\\vehicles\\h2a_banshee\\h2a_banshee_mp" },
+                    { "objects\\vehicles\\human\\turrets\\machinegun\\machinegun", "objects\\vehicles\\h2a_fixed_turret\\h2a_fixed_turret"},
+                    { "objects\\vehicles\\covenant\\ghost\\ghost", "objects\\vehicles\\h2a_ghost\\h2a_ghost"},
+                    { "objects\\vehicles\\human\\warthog\\warthog", "objects\\vehicles\\h2a_warthog\\h2a_warthog" },
+                    { "objects\\vehicles\\covenant\\turrets\\plasma_turret\\plasma_turret_mounted", "objects\\vehicles\\h2a_covenant_turret\\h2a_covenant_turret" },
+                    { "objects\\vehicles\\human\\falcon\\falcon", "objects\\vehicles\\h2a_hornet\\h2a_hornet" },
+                    { "objects\\vehicles\\human\\mongoose\\mongoose", "objects\\vehicles\\h2a_mongoose\\h2a_mongoose" },
+                    { "objects\\vehicles\\human\\scorpion\\scorpion", "objects\\vehicles\\h2a_scorpion\\h2a_scorpion" },
+                    { "objects\\vehicles\\covenant\\wraith\\wraith", "objects\\vehicles\\h2a_wraith\\h2a_wraith" }
+                };
+
+                // Output deserialized data
+                Console.WriteLine("\n\n--- VEHICLE DEFINITIONS ---");
+                ((TagFieldBlock)tagFile.SelectField("Block:vehicle palette")).RemoveAllElements();
+                ((TagFieldBlock)tagFile.SelectField("Block:vehicles")).RemoveAllElements();
+                i = 0;
+                foreach (var def in container.vehicleDefinitions)
+                {
+                    Console.WriteLine($"Vehicle definition {i}: \n\tTag: {def.tag}");
+                    ((TagFieldBlock)tagFile.SelectField("Block:vehicle palette")).AddElement();
+
+                    // Set vehicle tag path
+                    try
+                    {
+                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(vehicleMapping[def.tag], "vehicle");
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        Console.WriteLine($"\nKey not found in vehicle mapping dict for {def.tag}, using Reach path");
+                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, "vehicle");
+                    }
+
+                    i++;
+                }
+
+                Console.WriteLine("\n\n--- VEHICLE PLACEMENTS ---");
+                i = 0;
+                foreach (var vehi in container.vehiclePlacements)
+                {
+                    Console.WriteLine($"Vehicle Placement {i}: \n\tType: {vehi.typeIndex} \n\tName: {vehi.nameIndex} \n\tFlags: {vehi.flags} \n\tPosition: {vehi.position[0]}, {vehi.position[1]}, {vehi.position[2]} \n\tRotation: {vehi.rotation[0]}, {vehi.rotation[1]}, {vehi.rotation[2]} \n\tScale: {vehi.scale} \n\tVariant: {vehi.variantName} \n\tTeam: {vehi.ownerTeam}");
+                    ((TagFieldBlock)tagFile.SelectField("Block:vehicles")).AddElement();
+
+                    // Set type
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:type")).Value = vehi.typeIndex;
+
+                    // Set name
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:name")).Value = vehi.nameIndex;
+
+                    // Set flags
+                    ((TagFieldFlags)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Flags:placement flags")).RawValue = vehi.flags;
+
+                    // Set position
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealPoint3d:position")).Data = vehi.position;
+
+                    // Set rotation
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data = vehi.rotation;
+
+                    // Set scale
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Real:scale")).Data = vehi.scale;
+
+                    // Set variant
+                    ((TagFieldElementStringID)tagFile.SelectField($"Block:vehicles[{i}]/Struct:permutation data/StringID:variant name")).Data = vehi.variantName;
+
+                    // Set team
+                    ((TagFieldEnum)tagFile.SelectField($"Block:vehicles[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = vehi.ownerTeam;
+
+                    // Set tag type
+                    ((TagFieldEnum)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = 1;
+
                     i++;
                 }
             }

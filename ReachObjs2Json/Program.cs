@@ -10,12 +10,12 @@ namespace Reach2AObjConverter
 {
     internal class ReachObjs2Json
     {
-        public class SceneryDefinition
+        public class ObjectDefinition
         {
             public string tag { get; set; }
         }
 
-        public class SceneryPlacement
+        public class ObjectPlacement
         {
             public int typeIndex { get; set; }
             public int nameIndex { get; set; }
@@ -30,8 +30,10 @@ namespace Reach2AObjConverter
 
         public class ObjectDataContainer
         {
-            public List<SceneryDefinition> sceneryDefinitions { get; set; }
-            public List<SceneryPlacement> sceneryPlacements { get; set; }
+            public List<ObjectDefinition> sceneryDefinitions { get; set; }
+            public List<ObjectPlacement> sceneryPlacements { get; set; }
+            public List<ObjectDefinition> vehicleDefinitions { get; set; }
+            public List<ObjectPlacement> vehiclePlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -132,8 +134,10 @@ namespace Reach2AObjConverter
             var tagPath = TagPath.FromPathAndExtension(relativePath, "scenario");
 
             // List initialisation
-            List<SceneryDefinition> scenDefData = new List<SceneryDefinition>();
-            List<SceneryPlacement> scenPlaceData = new List<SceneryPlacement>();
+            List<ObjectDefinition> scenDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> scenPlaceData = new List<ObjectPlacement>();
+            List<ObjectDefinition> vehiDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> vehiPlaceData = new List<ObjectPlacement>();
 
             try
             {
@@ -147,7 +151,7 @@ namespace Reach2AObjConverter
                 // Get all scenery definition data
                 for (int i = 0; i < sceneryDefCount; i++)
                 {
-                    SceneryDefinition sceneryDef = new SceneryDefinition();
+                    ObjectDefinition sceneryDef = new ObjectDefinition();
                     Console.WriteLine($"Scenery definition {i}:");
                     TagPath path = ((TagFieldReference)tagFile.SelectField($"Block:scenery palette[{i}]/Reference:name")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
@@ -162,7 +166,7 @@ namespace Reach2AObjConverter
                 // Get all scenery object data
                 for (int i = 0; i < sceneryObjCount; i++)
                 {
-                    SceneryPlacement sceneryObj = new SceneryPlacement();
+                    ObjectPlacement sceneryObj = new ObjectPlacement();
                     Console.WriteLine($"Scenery placement {i}:");
 
                     int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:scenery[{i}]/ShortBlockIndex:type")).Value;
@@ -194,13 +198,72 @@ namespace Reach2AObjConverter
                     sceneryObj.variantName = variant;
 
                     int team = ((TagFieldEnum)tagFile.SelectField($"Block:scenery[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
-                    Console.WriteLine($"\tOwner team: {team}");
+                    Console.WriteLine($"\tOwner team: {team}\n");
                     sceneryObj.ownerTeam = team;
 
                     scenPlaceData.Add(sceneryObj);
                 }
 
-                // CRATES or smth //
+                // VEHICLES //
+                // Get total number of vehicle definitions
+                int vehicleDefCount = ((TagFieldBlock)tagFile.SelectField("Block:vehicle palette")).Elements.Count();
+                Console.WriteLine("\nReading scenario vehicle data:\n");
+
+                // Get all vehicle definition data
+                for (int i = 0; i < vehicleDefCount; i++)
+                {
+                    ObjectDefinition vehicleDef = new ObjectDefinition();
+                    Console.WriteLine($"Vehicle definition {i}:");
+                    TagPath path = ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path;
+                    Console.WriteLine($"\tTag path: {path}\n");
+                    vehicleDef.tag = path.RelativePath;
+
+                    vehiDefData.Add(vehicleDef);
+                }
+
+                // Get total number of vehicle objects
+                int vehicleObjCount = ((TagFieldBlock)tagFile.SelectField("Block:vehicles")).Elements.Count();
+
+                // Get all vehicle object data
+                for (int i = 0; i < vehicleObjCount; i++)
+                {
+                    ObjectPlacement vehicleObj = new ObjectPlacement();
+                    Console.WriteLine($"Vehicle placement {i}:");
+
+                    int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:type")).Value;
+                    Console.WriteLine($"\tType index: {type}");
+                    vehicleObj.typeIndex = type;
+
+                    int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:name")).Value;
+                    Console.WriteLine($"\tName index: {name}");
+                    vehicleObj.nameIndex = name;
+
+                    uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Flags:placement flags")).RawValue;
+                    Console.WriteLine($"\tFlags: {type}");
+                    vehicleObj.flags = flags;
+
+                    float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealPoint3d:position")).Data;
+                    Console.WriteLine($"\tPosition: {pos[0]}, {pos[1]}, {pos[2]}");
+                    vehicleObj.position = pos;
+
+                    float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
+                    Console.WriteLine($"\tRotation: {rot[0]}, {rot[1]}, {rot[2]}");
+                    vehicleObj.rotation = rot;
+
+                    float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Real:scale")).Data;
+                    Console.WriteLine($"\tScale: {scale}");
+                    vehicleObj.scale = scale;
+
+                    string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:vehicles[{i}]/Struct:permutation data/StringID:variant name")).Data;
+                    Console.WriteLine($"\tVariant name: {variant}");
+                    vehicleObj.variantName = variant;
+
+                    int team = ((TagFieldEnum)tagFile.SelectField($"Block:vehicles[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+                    Console.WriteLine($"\tOwner team: {team}\n");
+                    vehicleObj.ownerTeam = team;
+
+                    vehiPlaceData.Add(vehicleObj);
+                }
             }
             catch
             {
@@ -215,7 +278,9 @@ namespace Reach2AObjConverter
                 ObjectDataContainer objectDataContainer = new ObjectDataContainer
                 {
                     sceneryDefinitions = scenDefData,
-                    sceneryPlacements = scenPlaceData
+                    sceneryPlacements = scenPlaceData,
+                    vehicleDefinitions = vehiDefData,
+                    vehiclePlacements = vehiPlaceData
                 };
 
                 // Serialize to JSON

@@ -5,6 +5,7 @@ using System.Linq;
 using Bungie;
 using Bungie.Tags;
 using System.Text.Json;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Reach2AObjConverter
 {
@@ -27,6 +28,11 @@ namespace Reach2AObjConverter
             public int ownerTeam { get; set; }
         }
 
+        public class ResultsContainer
+        {
+            public List<ObjectDefinition> definitions { get; set; }
+            public List<ObjectPlacement> placements { get; set; }
+        }
 
         public class ObjectDataContainer
         {
@@ -145,125 +151,12 @@ namespace Reach2AObjConverter
                 Console.WriteLine("Tagfile opened\nReading scenario object data:\n");
 
                 // SCENERY //
-                // Get total number of scenery definitions
-                int sceneryDefCount = ((TagFieldBlock)tagFile.SelectField("Block:scenery palette")).Elements.Count();
-
-                // Get all scenery definition data
-                for (int i = 0; i < sceneryDefCount; i++)
-                {
-                    ObjectDefinition sceneryDef = new ObjectDefinition();
-                    Console.WriteLine($"Scenery definition {i}:");
-                    TagPath path = ((TagFieldReference)tagFile.SelectField($"Block:scenery palette[{i}]/Reference:name")).Path;
-                    Console.WriteLine($"\tTag path: {path}\n");
-                    sceneryDef.tag = path.RelativePath;
-
-                    scenDefData.Add(sceneryDef);
-                }
-
-                // Get total number of scenery objects
-                int sceneryObjCount = ((TagFieldBlock)tagFile.SelectField("Block:scenery")).Elements.Count();
-
-                // Get all scenery object data
-                for (int i = 0; i < sceneryObjCount; i++)
-                {
-                    ObjectPlacement sceneryObj = new ObjectPlacement();
-                    Console.WriteLine($"Scenery placement {i}:");
-
-                    int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:scenery[{i}]/ShortBlockIndex:type")).Value;
-                    Console.WriteLine($"\tType index: {type}");
-                    sceneryObj.typeIndex = type;
-
-                    int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:scenery[{i}]/ShortBlockIndex:name")).Value;
-                    Console.WriteLine($"\tName index: {name}");
-                    sceneryObj.nameIndex = name;
-
-                    uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:scenery[{i}]/Struct:object data/Flags:placement flags")).RawValue;
-                    Console.WriteLine($"\tFlags: {type}");
-                    sceneryObj.flags = flags;
-
-                    float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:scenery[{i}]/Struct:object data/RealPoint3d:position")).Data;
-                    Console.WriteLine($"\tPosition: {pos[0]}, {pos[1]}, {pos[2]}");
-                    sceneryObj.position = pos;
-
-                    float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:scenery[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
-                    Console.WriteLine($"\tRotation: {rot[0]}, {rot[1]}, {rot[2]}");
-                    sceneryObj.rotation = rot;
-
-                    float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:scenery[{i}]/Struct:object data/Real:scale")).Data;
-                    Console.WriteLine($"\tScale: {scale}");
-                    sceneryObj.scale = scale;
-
-                    string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:scenery[{i}]/Struct:permutation data/StringID:variant name")).Data;
-                    Console.WriteLine($"\tVariant name: {variant}");
-                    sceneryObj.variantName = variant;
-
-                    int team = ((TagFieldEnum)tagFile.SelectField($"Block:scenery[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
-                    Console.WriteLine($"\tOwner team: {team}\n");
-                    sceneryObj.ownerTeam = team;
-
-                    scenPlaceData.Add(sceneryObj);
-                }
+                scenDefData = GetObjectData(tagFile, "scenery").definitions;
+                scenPlaceData = GetObjectData(tagFile, "scenery").placements;
 
                 // VEHICLES //
-                // Get total number of vehicle definitions
-                int vehicleDefCount = ((TagFieldBlock)tagFile.SelectField("Block:vehicle palette")).Elements.Count();
-                Console.WriteLine("\nReading scenario vehicle data:\n");
-
-                // Get all vehicle definition data
-                for (int i = 0; i < vehicleDefCount; i++)
-                {
-                    ObjectDefinition vehicleDef = new ObjectDefinition();
-                    Console.WriteLine($"Vehicle definition {i}:");
-                    TagPath path = ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path;
-                    Console.WriteLine($"\tTag path: {path}\n");
-                    vehicleDef.tag = path.RelativePath;
-
-                    vehiDefData.Add(vehicleDef);
-                }
-
-                // Get total number of vehicle objects
-                int vehicleObjCount = ((TagFieldBlock)tagFile.SelectField("Block:vehicles")).Elements.Count();
-
-                // Get all vehicle object data
-                for (int i = 0; i < vehicleObjCount; i++)
-                {
-                    ObjectPlacement vehicleObj = new ObjectPlacement();
-                    Console.WriteLine($"Vehicle placement {i}:");
-
-                    int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:type")).Value;
-                    Console.WriteLine($"\tType index: {type}");
-                    vehicleObj.typeIndex = type;
-
-                    int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:vehicles[{i}]/ShortBlockIndex:name")).Value;
-                    Console.WriteLine($"\tName index: {name}");
-                    vehicleObj.nameIndex = name;
-
-                    uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Flags:placement flags")).RawValue;
-                    Console.WriteLine($"\tFlags: {type}");
-                    vehicleObj.flags = flags;
-
-                    float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealPoint3d:position")).Data;
-                    Console.WriteLine($"\tPosition: {pos[0]}, {pos[1]}, {pos[2]}");
-                    vehicleObj.position = pos;
-
-                    float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
-                    Console.WriteLine($"\tRotation: {rot[0]}, {rot[1]}, {rot[2]}");
-                    vehicleObj.rotation = rot;
-
-                    float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:vehicles[{i}]/Struct:object data/Real:scale")).Data;
-                    Console.WriteLine($"\tScale: {scale}");
-                    vehicleObj.scale = scale;
-
-                    string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:vehicles[{i}]/Struct:permutation data/StringID:variant name")).Data;
-                    Console.WriteLine($"\tVariant name: {variant}");
-                    vehicleObj.variantName = variant;
-
-                    int team = ((TagFieldEnum)tagFile.SelectField($"Block:vehicles[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
-                    Console.WriteLine($"\tOwner team: {team}\n");
-                    vehicleObj.ownerTeam = team;
-
-                    vehiPlaceData.Add(vehicleObj);
-                }
+                vehiDefData = GetObjectData(tagFile, "vehicles").definitions;
+                vehiPlaceData = GetObjectData(tagFile, "vehicles").placements;
             }
             catch
             {
@@ -301,6 +194,93 @@ namespace Reach2AObjConverter
             Console.WriteLine("\nPress enter to exit");
             Console.ReadLine();
             ManagedBlamSystem.Stop();
+        }
+    
+        public static ResultsContainer GetObjectData(TagFile tagFile, string objectType)
+        {
+            ResultsContainer results = new ResultsContainer();
+            List<ObjectDefinition> objDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> objPlaceData = new List<ObjectPlacement>();
+
+            // Get total number of object definitions
+            int objDefCount;
+            if (objectType == "vehicles")
+            {
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:vehicle palette")).Elements.Count();
+            }
+            else
+            {
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).Elements.Count();
+            }
+            
+            // Get all scenery definition data
+            for (int i = 0; i < objDefCount; i++)
+            {
+                ObjectDefinition objDef = new ObjectDefinition();
+                Console.WriteLine($"{objectType} definition {i}:");
+                TagPath path;
+                if (objectType == "vehicles")
+                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path;
+                }
+                else
+                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:name")).Path;
+                }
+                
+                Console.WriteLine($"\tTag path: {path}\n");
+                objDef.tag = path.RelativePath;
+
+                objDefData.Add(objDef);
+            }
+
+            // Get total number of placed objects
+            int objPlacedCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType}")).Elements.Count();
+
+            // Get all object data
+            for (int i = 0; i < objPlacedCount; i++)
+            {
+                ObjectPlacement objPlacement = new ObjectPlacement();
+                Console.WriteLine($"{objectType} placement {i}:");
+
+                int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value;
+                Console.WriteLine($"\tType index: {type}");
+                objPlacement.typeIndex = type;
+
+                int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:name")).Value;
+                Console.WriteLine($"\tName index: {name}");
+                objPlacement.nameIndex = name;
+
+                uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Flags:placement flags")).RawValue;
+                Console.WriteLine($"\tFlags: {type}");
+                objPlacement.flags = flags;
+
+                float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealPoint3d:position")).Data;
+                Console.WriteLine($"\tPosition: {pos[0]}, {pos[1]}, {pos[2]}");
+                objPlacement.position = pos;
+
+                float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
+                Console.WriteLine($"\tRotation: {rot[0]}, {rot[1]}, {rot[2]}");
+                objPlacement.rotation = rot;
+
+                float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Real:scale")).Data;
+                Console.WriteLine($"\tScale: {scale}");
+                objPlacement.scale = scale;
+
+                string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data;
+                Console.WriteLine($"\tVariant name: {variant}");
+                objPlacement.variantName = variant;
+
+                int team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+                Console.WriteLine($"\tOwner team: {team}\n");
+                objPlacement.ownerTeam = team;
+
+                objPlaceData.Add(objPlacement);
+            }
+
+            results.definitions = objDefData;
+            results.placements = objPlaceData;
+            return results;
         }
     }
 }

@@ -1,0 +1,6 @@
+.vs
+packages
+/JsonTo2AScenario/bin/*
+/JsonTo2AScenario/obj/*
+/ReachObjs2Json/bin/*
+/ReachObjs2Json/obj/*

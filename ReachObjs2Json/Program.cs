@@ -5,7 +5,6 @@ using System.Linq;
 using Bungie;
 using Bungie.Tags;
 using System.Text.Json;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace Reach2AObjConverter
 {

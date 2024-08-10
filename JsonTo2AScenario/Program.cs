@@ -24,6 +24,20 @@ namespace JsonTo2AScenario
             public float scale { get; set; }
             public string variantName { get; set; }
             public int ownerTeam { get; set; }
+
+            // Sound scenery specific values
+            public int volumeType { get; set; }
+            public float height { get; set; }
+            public float[] coneBounds { get; set; }
+            public float coneGain { get; set; }
+            public float obstrDistance { get; set; }
+            public float dntPlyDistance { get; set; }
+            public float atkDistance { get; set; }
+            public float minDistance { get; set; }
+            public float susBegDistance { get; set; }
+            public float susEndDistance { get; set; }
+            public float maxDistance { get; set; }
+            public float sustainDb { get; set; }
         }
 
         public class ObjectDataContainer
@@ -34,6 +48,8 @@ namespace JsonTo2AScenario
             public List<ObjectPlacement> vehiclePlacements { get; set; }
             public List<ObjectDefinition> equipmentDefinitions { get; set; }
             public List<ObjectPlacement> equipmentPlacements { get; set; }
+            public List<ObjectDefinition> soundscenDefinitions { get; set; }
+            public List<ObjectPlacement> soundscenPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -182,21 +198,27 @@ namespace JsonTo2AScenario
 
                 // SCENERY //
                 Console.WriteLine("--- SCENERY DEFINITIONS ---");
-                SetObjectDefData(tagFile, "scenery", container.sceneryDefinitions);
+                SetObjectDefData(tagFile, "scenery", container.sceneryDefinitions, "scenery");
                 Console.WriteLine("\n\n--- SCENERY PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "scenery", container.sceneryPlacements);
 
                 // VEHICLES //
                 Console.WriteLine("\n\n--- VEHICLE DEFINITIONS ---");
-                SetObjectDefData(tagFile, "vehicle", container.vehicleDefinitions);
+                SetObjectDefData(tagFile, "vehicle", container.vehicleDefinitions, "vehicle");
                 Console.WriteLine("\n\n--- VEHICLE PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "vehicles", container.vehiclePlacements);
 
                 // EQUIPMENT //
                 Console.WriteLine("\n\n--- EQUIPMENT DEFINITIONS ---");
-                SetObjectDefData(tagFile, "equipment", container.equipmentDefinitions);
+                SetObjectDefData(tagFile, "equipment", container.equipmentDefinitions, "equipment");
                 Console.WriteLine("\n\n--- EQUIPMENT PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "equipment", container.equipmentPlacements);
+
+                // SOUND SCENERY //
+                Console.WriteLine("\n\n--- SOUND SCENERY DEFINITIONS ---");
+                SetObjectDefData(tagFile, "sound scenery", container.soundscenDefinitions, "sound_scenery");
+                Console.WriteLine("\n\n--- SOUND SCENERY PLACEMENTS ---");
+                SetObjectPlaceData(tagFile, "sound scenery", container.soundscenPlacements);
             }
             catch
             {
@@ -212,7 +234,7 @@ namespace JsonTo2AScenario
             }
         }
 
-        public static void SetObjectDefData(TagFile tagFile, string objectType, List<ObjectDefinition> objDefinitions)
+        public static void SetObjectDefData(TagFile tagFile, string objectType, List<ObjectDefinition> objDefinitions, string tagExt)
         {
             // Reach vehicle tag paths need to be translated to H2A vehicle tag paths
             Dictionary<string, string> vehicleMapping = new Dictionary<string, string>()
@@ -250,30 +272,30 @@ namespace JsonTo2AScenario
                     // Set vehicle tag path
                     try
                     {
-                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(vehicleMapping[def.tag], "vehicle");
+                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(vehicleMapping[def.tag], tagExt);
                     }
                     catch (KeyNotFoundException)
                     {
                         Console.WriteLine($"\nKey not found in vehicle mapping dict for {def.tag}, using Reach path");
-                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, "vehicle");
+                        ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
                     }
                 }
                 else if (objectType == "equipment")
                 {
                     try
                     {
-                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(equipmentMapping[def.tag], "equipment");
+                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(equipmentMapping[def.tag], tagExt);
                     }
                     catch (KeyNotFoundException)
                     {
                         Console.WriteLine($"\nKey not found in equipment mapping dict for {def.tag}, using Reach path");
-                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, "equipment");
+                        ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
                     }
                 }
                 else
                 {
                     // Set object tag path
-                    ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, objectType);
+                    ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
                 }
                 
                 i++;
@@ -286,47 +308,112 @@ namespace JsonTo2AScenario
             Dictionary<string, int> objTypeMapping = new Dictionary<string, int>()
             {
                 { "scenery", 6 },
-                { "vehicles", 1},
-                { "equipment", 3}
+                { "vehicles", 1 },
+                { "equipment", 3 },
+                { "sound scenery", 10 }
             };
 
             int i = 0;
             ((TagFieldBlock)tagFile.SelectField($"Block:{objectType}")).RemoveAllElements();
             foreach (var obj in objPlacements)
             {
-                Console.WriteLine($"{objectType} Placement {i}: \n\tType: {obj.typeIndex} \n\tName: {obj.nameIndex} \n\tFlags: {obj.flags} \n\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]} \n\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]} \n\tScale: {obj.scale} \n\tVariant: {obj.variantName} \n\tTeam: {obj.ownerTeam}");
+                Console.WriteLine($"{objectType} Placement {i}:");
                 ((TagFieldBlock)tagFile.SelectField($"Block:{objectType}")).AddElement();
 
                 // Set type
+                Console.WriteLine($"\tType: {obj.typeIndex}");
                 ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value = obj.typeIndex;
 
                 // Set name
+                Console.WriteLine($"\tName: {obj.nameIndex}");
                 ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:name")).Value = obj.nameIndex;
 
                 // Set flags
+                Console.WriteLine($"\tFlags: {obj.flags}");
                 ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Flags:placement flags")).RawValue = obj.flags;
 
                 // Set position
+                Console.WriteLine($"\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]}");
                 ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealPoint3d:position")).Data = obj.position;
 
                 // Set rotation
+                Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
                 ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data = obj.rotation;
 
                 // Set scale
+                Console.WriteLine($"\tScale: {obj.scale}");
                 ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Real:scale")).Data = obj.scale;
 
-                if (objectType != "equipment")
+                if (objectType != "equipment" && objectType != "sound scenery")
                 {
                     // Set variant
+                    Console.WriteLine($"\tVariant: {obj.variantName}");
                     ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data = obj.variantName;
                 }
                 
-                // Set team
-                ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = obj.ownerTeam;
+                if (objectType != "sound scenery")
+                {
+                    // Set team
+                    Console.WriteLine($"\tTeam: {obj.ownerTeam}");
+                    ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = obj.ownerTeam;
+                }
 
                 // Set tag type
+                Console.WriteLine($"\tTag: {objTypeMapping[objectType]}");
                 ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = objTypeMapping[objectType];
 
+                // Sound scenery specific settings
+                if (objectType == "sound scenery")
+                {
+                    // Set volume type
+                    Console.WriteLine($"\tVolume type: {obj.volumeType}");
+                    ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value = obj.volumeType;
+
+                    // Set volume height
+                    Console.WriteLine($"\tVolume height: {obj.height}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:height")).Data = obj.height;
+
+                    // Set cone angle bounds
+                    Console.WriteLine($"\tCone angle bounds: {obj.coneBounds[0]}, {obj.coneBounds[1]}");
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data = obj.coneBounds;
+
+                    // Set cone gain
+                    Console.WriteLine($"\tCone gain: {obj.coneGain}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data = obj.coneGain;
+
+                    // Set don't obstruct distance
+                    Console.WriteLine($"\tDon't obstruct distance: {obj.obstrDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data = obj.obstrDistance;
+
+                    // Set don't play distance
+                    Console.WriteLine($"\tDon't play distance: {obj.dntPlyDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data = obj.dntPlyDistance;
+
+                    // Set attack distance
+                    Console.WriteLine($"\tAttack distance: {obj.atkDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data = obj.atkDistance;
+
+                    // Set minimum distance
+                    Console.WriteLine($"\tMinimum distance: {obj.minDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data = obj.minDistance;
+
+                    // Set sustain begin distance
+                    Console.WriteLine($"\tSustain begin distance: {obj.susBegDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data = obj.susBegDistance;
+
+                    // Set sustain end distance
+                    Console.WriteLine($"\tSustain end distance: {obj.susEndDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data = obj.susEndDistance;
+
+                    // Set maximum distance
+                    Console.WriteLine($"\tMaximum distance: {obj.maxDistance}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data = obj.maxDistance;
+
+                    // Set sustain Db
+                    Console.WriteLine($"\tSustain Db: {obj.sustainDb}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data = obj.sustainDb;
+                }
+                
                 i++;
             }
         }

@@ -25,6 +25,20 @@ namespace Reach2AObjConverter
             public float scale { get; set; }
             public string variantName { get; set; }
             public int ownerTeam { get; set; }
+
+            // Sound scenery specific values
+            public int volumeType { get; set; }
+            public float height { get; set; }
+            public float[] coneBounds { get; set; }
+            public float coneGain { get; set; }
+            public float obstrDistance {  get; set; }
+            public float dntPlyDistance { get; set; }
+            public float atkDistance { get; set; }
+            public float minDistance { get; set; }
+            public float susBegDistance { get; set; }
+            public float susEndDistance { get; set; }
+            public float maxDistance { get; set; }
+            public float sustainDb {  get; set; }
         }
 
         public class ResultsContainer
@@ -41,6 +55,8 @@ namespace Reach2AObjConverter
             public List<ObjectPlacement> vehiclePlacements { get; set; }
             public List<ObjectDefinition> equipmentDefinitions { get; set; }
             public List<ObjectPlacement> equipmentPlacements { get; set; }
+            public List<ObjectDefinition> soundscenDefinitions { get; set; }
+            public List<ObjectPlacement> soundscenPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -147,6 +163,8 @@ namespace Reach2AObjConverter
             List<ObjectPlacement> vehiPlaceData = new List<ObjectPlacement>();
             List<ObjectDefinition> eqipDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> eqipPlaceData = new List<ObjectPlacement>();
+            List<ObjectDefinition> ssceDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> sscePlaceData = new List<ObjectPlacement>();
 
             try
             {
@@ -164,6 +182,10 @@ namespace Reach2AObjConverter
                 // EQUIPMENT //
                 eqipDefData = GetObjectData(tagFile, "equipment").definitions;
                 eqipPlaceData = GetObjectData(tagFile, "equipment").placements;
+
+                // SOUND SCENERY //
+                ssceDefData = GetObjectData(tagFile, "sound scenery").definitions;
+                sscePlaceData = GetObjectData(tagFile, "sound scenery").placements;
             }
             catch
             {
@@ -182,7 +204,9 @@ namespace Reach2AObjConverter
                     vehicleDefinitions = vehiDefData,
                     vehiclePlacements = vehiPlaceData,
                     equipmentDefinitions = eqipDefData,
-                    equipmentPlacements = eqipPlaceData
+                    equipmentPlacements = eqipPlaceData,
+                    soundscenDefinitions = ssceDefData,
+                    soundscenPlacements = sscePlaceData,
                 };
 
                 // Serialize to JSON
@@ -276,14 +300,68 @@ namespace Reach2AObjConverter
                 Console.WriteLine($"\tScale: {scale}");
                 objPlacement.scale = scale;
 
-                if (objectType != "equipment")
+                if (objectType != "equipment" && objectType != "sound scenery")
                 {
                     string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data;
                     Console.WriteLine($"\tVariant name: {variant}");
                     objPlacement.variantName = variant;
                 }
-                
-                int team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+
+                int team = -1;
+                if (objectType == "sound scenery")
+                {
+                    int volType = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value;
+                    Console.WriteLine($"\tVolume type: {volType}");
+                    objPlacement.volumeType = volType;
+
+                    float height = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:height")).Data;
+                    Console.WriteLine($"\tHeight: {height}");
+                    objPlacement.height = height;
+
+                    float[] coneBounds = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data;
+                    Console.WriteLine($"\tCone bounds: {coneBounds[0]}, {coneBounds[1]}");
+                    objPlacement.coneBounds = coneBounds;
+
+                    float coneGain = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data;
+                    Console.WriteLine($"\tCone gain: {coneGain}");
+                    objPlacement.coneGain = coneGain;
+
+                    float dntObstrDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data;
+                    Console.WriteLine($"\tDon't obstruct distance: {dntObstrDist}");
+                    objPlacement.obstrDistance = dntObstrDist;
+
+                    float dntPlayDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data;
+                    Console.WriteLine($"\tDon't play distance: {dntPlayDist}");
+                    objPlacement.dntPlyDistance = dntPlayDist;
+
+                    float attackDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data;
+                    Console.WriteLine($"\tAttack distance: {attackDist}");
+                    objPlacement.atkDistance = attackDist;
+
+                    float minDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data;
+                    Console.WriteLine($"\tMinimum distance: {minDist}");
+                    objPlacement.minDistance = minDist;
+
+                    float susBegDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data;
+                    Console.WriteLine($"\tSustain begin distance: {susBegDist}");
+                    objPlacement.susBegDistance = susBegDist;
+
+                    float susEndDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data;
+                    Console.WriteLine($"\tSustain end distance: {susEndDist}");
+                    objPlacement.susEndDistance = susEndDist;
+
+                    float maxDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data;
+                    Console.WriteLine($"\tMaximum distance: {maxDist}");
+                    objPlacement.maxDistance = maxDist;
+
+                    float susDb = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data;
+                    Console.WriteLine($"\tSustain Db: {susDb}");
+                    objPlacement.sustainDb = susDb;
+                }
+                else
+                {
+                    team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+                }
                 Console.WriteLine($"\tOwner team: {team}\n");
                 objPlacement.ownerTeam = team;
 

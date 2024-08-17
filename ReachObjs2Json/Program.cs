@@ -85,6 +85,8 @@ namespace Reach2AObjConverter
             public List<ObjectDefinition> soundscenDefinitions { get; set; }
             public List<ObjectPlacement> soundscenPlacements { get; set; }
             public List<TriggerVolume> triggerVolumes { get; set; }
+            public List<ObjectDefinition> crateDefinitions { get; set; }
+            public List<ObjectPlacement> cratePlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -194,30 +196,41 @@ namespace Reach2AObjConverter
             List<ObjectDefinition> ssceDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> sscePlaceData = new List<ObjectPlacement>();
             List<TriggerVolume> trigVolData = new List<TriggerVolume>();
+            List<ObjectDefinition> crateDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> cratePlaceData = new List<ObjectPlacement>();
 
             try
             {
                 tagFile.Load(tagPath);
                 Console.WriteLine("Tagfile opened\nReading scenario object data:\n");
-                
+
                 // SCENERY //
-                scenDefData = GetObjectData(tagFile, "scenery").definitions;
-                scenPlaceData = GetObjectData(tagFile, "scenery").placements;
+                var scenData = GetObjectData(tagFile, "scenery");
+                scenDefData = scenData.definitions;
+                scenPlaceData = scenData.placements;
 
                 // VEHICLES //
-                vehiDefData = GetObjectData(tagFile, "vehicles").definitions;
-                vehiPlaceData = GetObjectData(tagFile, "vehicles").placements;
+                var vehiData = GetObjectData(tagFile, "vehicles");
+                vehiDefData = vehiData.definitions;
+                vehiPlaceData = vehiData.placements;
 
                 // EQUIPMENT //
-                eqipDefData = GetObjectData(tagFile, "equipment").definitions;
-                eqipPlaceData = GetObjectData(tagFile, "equipment").placements;
+                var eqipData = GetObjectData(tagFile, "equipment");
+                eqipDefData = eqipData.definitions;
+                eqipPlaceData = eqipData.placements;
 
                 // SOUND SCENERY //
-                ssceDefData = GetObjectData(tagFile, "sound scenery").definitions;
-                sscePlaceData = GetObjectData(tagFile, "sound scenery").placements;
+                var ssceData = GetObjectData(tagFile, "sound scenery");
+                ssceDefData = ssceData.definitions;
+                sscePlaceData = ssceData.placements;
                 
                 // TRIGGER VOLUMES //
                 trigVolData = GetTrigVolData(tagFile);
+
+                // CRATES //
+                //var crateData = GetObjectData(tagFile, "crates");
+               // crateDefData = crateData.definitions;
+                //cratePlaceData = crateData.placements;
             }
             catch
             {
@@ -239,7 +252,9 @@ namespace Reach2AObjConverter
                     equipmentPlacements = eqipPlaceData,
                     soundscenDefinitions = ssceDefData,
                     soundscenPlacements = sscePlaceData,
-                    triggerVolumes = trigVolData
+                    triggerVolumes = trigVolData,
+                    crateDefinitions = crateDefData,
+                    cratePlacements = cratePlaceData,
                 };
 
                 // Serialize to JSON

@@ -40,6 +40,33 @@ namespace JsonTo2AScenario
             public float sustainDb { get; set; }
         }
 
+        public class TriggerVolume
+        {
+            public class SectorPoint
+            {
+                public float[] position { get; set; }
+                public float[] normal { get; set; }
+            }
+
+            public string name { get; set; }
+            public int objNameIndex { get; set; }
+            public long nodeIndex { get; set; }
+            public string nodeName { get; set; }
+            public int type { get; set; }
+            public float[] forward { get; set; }
+            public float[] up { get; set; }
+            public float[] position { get; set; }
+            public float[] extents { get; set; }
+            public float zSink { get; set; }
+            public List<SectorPoint> sectorPoints { get; set; }
+            public int killTrigVol { get; set; }
+
+            public TriggerVolume()
+            {
+                sectorPoints = new List<SectorPoint>();
+            }
+        }
+
         public class ObjectDataContainer
         {
             public List<ObjectDefinition> sceneryDefinitions { get; set; }
@@ -50,6 +77,7 @@ namespace JsonTo2AScenario
             public List<ObjectPlacement> equipmentPlacements { get; set; }
             public List<ObjectDefinition> soundscenDefinitions { get; set; }
             public List<ObjectPlacement> soundscenPlacements { get; set; }
+            public List<TriggerVolume> triggerVolumes { get; set; }
         }
 
         public class FilePathSanitiser
@@ -195,7 +223,7 @@ namespace JsonTo2AScenario
             {
                 tagFile.Load(tagPath);
                 Console.WriteLine("Tagfile opened\nWriting scenario object data:\n");
-
+                
                 // SCENERY //
                 Console.WriteLine("--- SCENERY DEFINITIONS ---");
                 SetObjectDefData(tagFile, "scenery", container.sceneryDefinitions, "scenery");
@@ -219,6 +247,10 @@ namespace JsonTo2AScenario
                 SetObjectDefData(tagFile, "sound scenery", container.soundscenDefinitions, "sound_scenery");
                 Console.WriteLine("\n\n--- SOUND SCENERY PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "sound scenery", container.soundscenPlacements);
+                
+                // TRIGGER VOLUMES //
+                Console.WriteLine("\n\n--- TRIGGER VOLUMES ---");
+                SetTrigVolData(tagFile, container.triggerVolumes);
             }
             catch
             {
@@ -414,6 +446,64 @@ namespace JsonTo2AScenario
                     ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data = obj.sustainDb;
                 }
                 
+                i++;
+            }
+        }
+    
+        public static void SetTrigVolData(TagFile tagFile, List<TriggerVolume> trigVols)
+        {
+            int i = 0;
+            ((TagFieldBlock)tagFile.SelectField($"Block:trigger volumes")).RemoveAllElements();
+            foreach (TriggerVolume trigVol in trigVols)
+            {
+                Console.WriteLine($"Trigger volume {i}:");
+                ((TagFieldBlock)tagFile.SelectField($"Block:trigger volumes")).AddElement();
+
+                ((TagFieldElementStringID)tagFile.SelectField($"Block:trigger volumes[{i}]/StringID:name")).Data = trigVol.name;
+                Console.WriteLine($"\tName: {trigVol.name}");
+
+                ((TagFieldBlockIndex)tagFile.SelectField($"Block:trigger volumes[{i}]/ShortBlockIndex:object name")).Value = trigVol.objNameIndex;
+                Console.WriteLine($"\tObject name index: {trigVol.objNameIndex}");
+
+                ((TagFieldElementInteger)tagFile.SelectField($"Block:trigger volumes[{i}]/ShortInteger:runtime node index")).Data = trigVol.nodeIndex;
+                Console.WriteLine($"\tRuntime node index: {trigVol.nodeIndex}");
+
+                ((TagFieldElementStringID)tagFile.SelectField($"Block:trigger volumes[{i}]/StringID:node name")).Data = trigVol.nodeName;
+                Console.WriteLine($"\tNode name: {trigVol.nodeName}");
+
+                ((TagFieldEnum)tagFile.SelectField($"Block:trigger volumes[{i}]/ShortEnum:type")).Value = trigVol.type;
+                Console.WriteLine($"\tType: {trigVol.type}");
+
+                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/RealVector3d:forward")).Data = trigVol.forward;
+                Console.WriteLine($"\tForward: {trigVol.forward[0]}, {trigVol.forward[1]}, {trigVol.forward[2]}");
+
+                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/RealVector3d:up")).Data = trigVol.up;
+                Console.WriteLine($"\tUp: {trigVol.up[0]}, {trigVol.up[1]}, {trigVol.up[2]}");
+
+                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/RealPoint3d:position")).Data = trigVol.position;
+                Console.WriteLine($"\tPosition: {trigVol.position[0]}, {trigVol.position[1]}, {trigVol.position[2]}");
+
+                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/RealPoint3d:extents")).Data = trigVol.extents;
+                Console.WriteLine($"\tExtents: {trigVol.extents[0]}, {trigVol.extents[1]}, {trigVol.extents[2]}");
+
+                ((TagFieldElementSingle)tagFile.SelectField($"Block:trigger volumes[{i}]/Real:z sink")).Data = trigVol.zSink;
+                Console.WriteLine($"\tZ sink: {trigVol.zSink}");
+
+                int j = 0;
+                foreach (TriggerVolume.SectorPoint sectorPoint in trigVol.sectorPoints)
+                {
+                    Console.WriteLine($"\tSector point {j}:");
+                    ((TagFieldBlock)tagFile.SelectField($"Block:trigger volumes[{i}]/Block:sector points")).AddElement();
+
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/Block:sector points[{j}]/RealPoint3d:position")).Data = sectorPoint.position;
+                    Console.WriteLine($"\t\tPosition: {sectorPoint.position[0]}, {sectorPoint.position[1]}, {sectorPoint.position[2]}");
+
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/Block:sector points[{j}]/RealEulerAngles2d:normal")).Data = sectorPoint.normal;
+                    Console.WriteLine($"\t\tNormal: {sectorPoint.normal[0]}, {sectorPoint.normal[1]}");
+
+                    j++;
+                }
+
                 i++;
             }
         }

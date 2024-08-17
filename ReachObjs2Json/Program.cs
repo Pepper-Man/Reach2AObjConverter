@@ -61,7 +61,13 @@ namespace Reach2AObjConverter
             public float zSink { get; set; }
             public List<SectorPoint> sectorPoints { get; set; }
             public int killTrigVol { get; set; }
+
+            public TriggerVolume()
+            {
+                sectorPoints = new List<SectorPoint>();
+            }
         }
+
         public class ResultsContainer
         {
             public List<ObjectDefinition> definitions { get; set; }
@@ -455,6 +461,8 @@ namespace Reach2AObjConverter
 
                     sectorPoint.normal = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:trigger volumes[{i}]/Block:sector points[{j}]/RealEulerAngles2d:normal")).Data;
                     Console.WriteLine($"\t\tNormal: {sectorPoint.normal[0]}, {sectorPoint.normal[1]}");
+
+                    trigVol.sectorPoints.Add(sectorPoint);
                 }
 
                 trigVol.killTrigVol = ((TagFieldBlockIndex)tagFile.SelectField($"Block:trigger volumes[{i}]/ShortBlockIndex:kill trigger volume")).Value;

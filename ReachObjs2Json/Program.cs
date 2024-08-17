@@ -462,11 +462,11 @@ namespace Reach2AObjConverter
                     objPlacement.rotation = rot;
 
                     float scaleX = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data;
-                    Console.WriteLine($"\tMaximum distance: {scaleX}");
+                    Console.WriteLine($"\tScale X: {scaleX}");
                     objPlacement.scaleX = scaleX;
 
                     float scaleY = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data;
-                    Console.WriteLine($"\tMaximum distance: {scaleY}");
+                    Console.WriteLine($"\tScale Y: {scaleY}");
                     objPlacement.scaleY = scaleY;
                 }
 

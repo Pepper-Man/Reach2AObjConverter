@@ -38,6 +38,10 @@ namespace JsonTo2AScenario
             public float susEndDistance { get; set; }
             public float maxDistance { get; set; }
             public float sustainDb { get; set; }
+
+            // Decal specific values
+            public float scaleX { get; set; }
+            public float scaleY { get; set; }
         }
 
         public class TriggerVolume
@@ -80,6 +84,8 @@ namespace JsonTo2AScenario
             public List<TriggerVolume> triggerVolumes { get; set; }
             public List<ObjectDefinition> crateDefinitions { get; set; }
             public List<ObjectPlacement> cratePlacements { get; set; }
+            public List<ObjectDefinition> decalDefinitions { get; set; }
+            public List<ObjectPlacement> decalPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -259,6 +265,12 @@ namespace JsonTo2AScenario
                 SetObjectDefData(tagFile, "crate", container.crateDefinitions, "crate");
                 Console.WriteLine("\n\n--- CRATE PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "crates", container.cratePlacements);
+
+                // DECALS //
+                Console.WriteLine("\n\n--- DECAL DEFINITIONS ---");
+                SetObjectDefData(tagFile, "decal", container.decalDefinitions, "decal_system");
+                Console.WriteLine("\n\n--- DECAL PLACEMENTS ---");
+                SetObjectPlaceData(tagFile, "decals", container.decalPlacements);
             }
             catch
             {
@@ -332,6 +344,10 @@ namespace JsonTo2AScenario
                         ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
                     }
                 }
+                else if (objectType == "decal")
+                {
+                    ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:reference")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
+                }
                 else
                 {
                     // Set object tag path
@@ -361,100 +377,123 @@ namespace JsonTo2AScenario
                 Console.WriteLine($"{objectType} Placement {i}:");
                 ((TagFieldBlock)tagFile.SelectField($"Block:{objectType}")).AddElement();
 
-                // Set type
-                Console.WriteLine($"\tType: {obj.typeIndex}");
-                ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value = obj.typeIndex;
-
-                // Set name
-                Console.WriteLine($"\tName: {obj.nameIndex}");
-                ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:name")).Value = obj.nameIndex;
-
-                // Set flags
-                Console.WriteLine($"\tFlags: {obj.flags}");
-                ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Flags:placement flags")).RawValue = obj.flags;
-
-                // Set position
-                Console.WriteLine($"\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]}");
-                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealPoint3d:position")).Data = obj.position;
-
-                // Set rotation
-                Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
-                ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data = obj.rotation;
-
-                // Set scale
-                Console.WriteLine($"\tScale: {obj.scale}");
-                ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Real:scale")).Data = obj.scale;
-
-                if (objectType != "equipment" && objectType != "sound scenery")
+                if (objectType != "decals")
                 {
-                    // Set variant
-                    Console.WriteLine($"\tVariant: {obj.variantName}");
-                    ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data = obj.variantName;
+
+
+                    // Set type
+                    Console.WriteLine($"\tType: {obj.typeIndex}");
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value = obj.typeIndex;
+
+                    // Set name
+                    Console.WriteLine($"\tName: {obj.nameIndex}");
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:name")).Value = obj.nameIndex;
+
+                    // Set flags
+                    Console.WriteLine($"\tFlags: {obj.flags}");
+                    ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Flags:placement flags")).RawValue = obj.flags;
+
+                    // Set position
+                    Console.WriteLine($"\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]}");
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealPoint3d:position")).Data = obj.position;
+
+                    // Set rotation
+                    Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data = obj.rotation;
+
+                    // Set scale
+                    Console.WriteLine($"\tScale: {obj.scale}");
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Real:scale")).Data = obj.scale;
+
+                    if (objectType != "equipment" && objectType != "sound scenery")
+                    {
+                        // Set variant
+                        Console.WriteLine($"\tVariant: {obj.variantName}");
+                        ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data = obj.variantName;
+                    }
+
+                    if (objectType != "sound scenery")
+                    {
+                        // Set team
+                        Console.WriteLine($"\tTeam: {obj.ownerTeam}");
+                        ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = obj.ownerTeam;
+                    }
+
+                    // Set tag type
+                    Console.WriteLine($"\tTag: {objTypeMapping[objectType]}");
+                    ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = objTypeMapping[objectType];
+
+                    // Sound scenery specific settings
+                    if (objectType == "sound scenery")
+                    {
+                        // Set volume type
+                        Console.WriteLine($"\tVolume type: {obj.volumeType}");
+                        ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value = obj.volumeType;
+
+                        // Set volume height
+                        Console.WriteLine($"\tVolume height: {obj.height}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:height")).Data = obj.height;
+
+                        // Set cone angle bounds
+                        Console.WriteLine($"\tCone angle bounds: {obj.coneBounds[0]}, {obj.coneBounds[1]}");
+                        ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data = obj.coneBounds;
+
+                        // Set cone gain
+                        Console.WriteLine($"\tCone gain: {obj.coneGain}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data = obj.coneGain;
+
+                        // Set don't obstruct distance
+                        Console.WriteLine($"\tDon't obstruct distance: {obj.obstrDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data = obj.obstrDistance;
+
+                        // Set don't play distance
+                        Console.WriteLine($"\tDon't play distance: {obj.dntPlyDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data = obj.dntPlyDistance;
+
+                        // Set attack distance
+                        Console.WriteLine($"\tAttack distance: {obj.atkDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data = obj.atkDistance;
+
+                        // Set minimum distance
+                        Console.WriteLine($"\tMinimum distance: {obj.minDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data = obj.minDistance;
+
+                        // Set sustain begin distance
+                        Console.WriteLine($"\tSustain begin distance: {obj.susBegDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data = obj.susBegDistance;
+
+                        // Set sustain end distance
+                        Console.WriteLine($"\tSustain end distance: {obj.susEndDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data = obj.susEndDistance;
+
+                        // Set maximum distance
+                        Console.WriteLine($"\tMaximum distance: {obj.maxDistance}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data = obj.maxDistance;
+
+                        // Set sustain Db
+                        Console.WriteLine($"\tSustain Db: {obj.sustainDb}");
+                        ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data = obj.sustainDb;
+                    }
                 }
-                
-                if (objectType != "sound scenery")
+                else
                 {
-                    // Set team
-                    Console.WriteLine($"\tTeam: {obj.ownerTeam}");
-                    ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value = obj.ownerTeam;
+                    // Decal-specific data
+                    ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:decal palette index")).Value = obj.typeIndex;
+                    Console.WriteLine($"\tType index: {obj.typeIndex}");
+
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/RealPoint3d:position")).Data = obj.position;
+                    Console.WriteLine($"\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]}");
+
+                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/RealQuaternion:rotation")).Data = obj.rotation;
+                    Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
+
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = obj.scaleX;
+                    Console.WriteLine($"\tScale X: {obj.scaleX}");
+
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
+                    Console.WriteLine($"\tScale Y: {obj.scaleY}");
                 }
 
-                // Set tag type
-                Console.WriteLine($"\tTag: {objTypeMapping[objectType]}");
-                ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Struct:object id/CharEnum:type")).Value = objTypeMapping[objectType];
-
-                // Sound scenery specific settings
-                if (objectType == "sound scenery")
-                {
-                    // Set volume type
-                    Console.WriteLine($"\tVolume type: {obj.volumeType}");
-                    ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value = obj.volumeType;
-
-                    // Set volume height
-                    Console.WriteLine($"\tVolume height: {obj.height}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:height")).Data = obj.height;
-
-                    // Set cone angle bounds
-                    Console.WriteLine($"\tCone angle bounds: {obj.coneBounds[0]}, {obj.coneBounds[1]}");
-                    ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data = obj.coneBounds;
-
-                    // Set cone gain
-                    Console.WriteLine($"\tCone gain: {obj.coneGain}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data = obj.coneGain;
-
-                    // Set don't obstruct distance
-                    Console.WriteLine($"\tDon't obstruct distance: {obj.obstrDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data = obj.obstrDistance;
-
-                    // Set don't play distance
-                    Console.WriteLine($"\tDon't play distance: {obj.dntPlyDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data = obj.dntPlyDistance;
-
-                    // Set attack distance
-                    Console.WriteLine($"\tAttack distance: {obj.atkDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data = obj.atkDistance;
-
-                    // Set minimum distance
-                    Console.WriteLine($"\tMinimum distance: {obj.minDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data = obj.minDistance;
-
-                    // Set sustain begin distance
-                    Console.WriteLine($"\tSustain begin distance: {obj.susBegDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data = obj.susBegDistance;
-
-                    // Set sustain end distance
-                    Console.WriteLine($"\tSustain end distance: {obj.susEndDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data = obj.susEndDistance;
-
-                    // Set maximum distance
-                    Console.WriteLine($"\tMaximum distance: {obj.maxDistance}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data = obj.maxDistance;
-
-                    // Set sustain Db
-                    Console.WriteLine($"\tSustain Db: {obj.sustainDb}");
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data = obj.sustainDb;
-                }
-                
                 i++;
             }
         }

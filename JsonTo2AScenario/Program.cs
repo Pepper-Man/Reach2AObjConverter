@@ -78,6 +78,8 @@ namespace JsonTo2AScenario
             public List<ObjectDefinition> soundscenDefinitions { get; set; }
             public List<ObjectPlacement> soundscenPlacements { get; set; }
             public List<TriggerVolume> triggerVolumes { get; set; }
+            public List<ObjectDefinition> crateDefinitions { get; set; }
+            public List<ObjectPlacement> cratePlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -251,6 +253,12 @@ namespace JsonTo2AScenario
                 // TRIGGER VOLUMES //
                 Console.WriteLine("\n\n--- TRIGGER VOLUMES ---");
                 SetTrigVolData(tagFile, container.triggerVolumes);
+
+                // CRATES //
+                Console.WriteLine("\n\n--- CRATE DEFINITIONS ---");
+                SetObjectDefData(tagFile, "crate", container.crateDefinitions, "crate");
+                Console.WriteLine("\n\n--- CRATE PLACEMENTS ---");
+                SetObjectPlaceData(tagFile, "crates", container.cratePlacements);
             }
             catch
             {
@@ -342,7 +350,8 @@ namespace JsonTo2AScenario
                 { "scenery", 6 },
                 { "vehicles", 1 },
                 { "equipment", 3 },
-                { "sound scenery", 10 }
+                { "sound scenery", 10 },
+                { "crates", 11 }
             };
 
             int i = 0;

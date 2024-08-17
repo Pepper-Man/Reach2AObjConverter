@@ -228,9 +228,9 @@ namespace Reach2AObjConverter
                 trigVolData = GetTrigVolData(tagFile);
 
                 // CRATES //
-                //var crateData = GetObjectData(tagFile, "crates");
-               // crateDefData = crateData.definitions;
-                //cratePlaceData = crateData.placements;
+                var crateData = GetObjectData(tagFile, "crates");
+                crateDefData = crateData.definitions;
+                cratePlaceData = crateData.placements;
             }
             catch
             {
@@ -289,6 +289,10 @@ namespace Reach2AObjConverter
             {
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:vehicle palette")).Elements.Count();
             }
+            else if (objectType == "crates")
+            {
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:crate palette")).Elements.Count();
+            }
             else
             {
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).Elements.Count();
@@ -303,6 +307,10 @@ namespace Reach2AObjConverter
                 if (objectType == "vehicles")
                 {
                     path = ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path;
+                }
+                else if (objectType == "crates")
+                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:crate palette[{i}]/Reference:name")).Path;
                 }
                 else
                 {

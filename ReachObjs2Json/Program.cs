@@ -630,7 +630,7 @@ namespace Reach2AObjConverter
                             // Alpha map, only get data if shader is currently set to use alpha map
                             string alphaMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
                             Console.WriteLine($"\t\tAlpha map: {alphaMap}");
-                            decalSettings.baseRef = alphaMap;
+                            decalSettings.alphaRef = alphaMap;
                         }
                         else if (paramName == "tint_color" && tintType != 0)
                         {

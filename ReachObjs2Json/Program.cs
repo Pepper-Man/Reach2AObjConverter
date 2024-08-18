@@ -13,6 +13,22 @@ namespace Reach2AObjConverter
         public class ObjectDefinition
         {
             public string tag { get; set; }
+
+            // Decal-specific values
+            public class DecalSettings
+            {
+                public string baseRef { get; set; }
+                public string alphaRef { get; set; }
+                public float[] tintColour { get; set; }
+                public long blendMode { get; set; }
+            }
+
+            public List<DecalSettings> decalSettings { get; set; }
+            
+            public ObjectDefinition()
+            {
+                decalSettings = new List<DecalSettings>();
+            }
         }
 
         public class ObjectPlacement
@@ -334,15 +350,20 @@ namespace Reach2AObjConverter
                 else if (objectType == "decals")
                 {
                     path = ((TagFieldReference)tagFile.SelectField($"Block:decal palette[{i}]/Reference:reference")).Path;
+                    Console.WriteLine($"\tTag path: {path}\n");
+                    objDef.tag = path.RelativePath;
+                    objDef = GetDecalShaderData(objDef, path);
                 }
                 else
                 {
                     path = ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:name")).Path;
                 }
                 
-                Console.WriteLine($"\tTag path: {path}\n");
-                objDef.tag = path.RelativePath;
-
+                if (objectType != "decals")
+                {
+                    Console.WriteLine($"\tTag path: {path}\n");
+                    objDef.tag = path.RelativePath;
+                }
                 objDefData.Add(objDef);
             }
 
@@ -544,6 +565,105 @@ namespace Reach2AObjConverter
             }
 
             return triggerVolumes;
+        }
+    
+        public static ObjectDefinition GetDecalShaderData(ObjectDefinition decalData, TagPath decalPath)
+        {
+            var decalFile = new TagFile();
+            List<ObjectDefinition.DecalSettings> allDecalSettings = new List<ObjectDefinition.DecalSettings>();
+
+            try
+            {
+                decalFile.Load(decalPath);
+                Console.WriteLine($"\tDecal tag \"{decalPath.RelativePath}.decal_system\" opened\n\tReading shader data:\n");
+
+                // Get total number of decals in decal system
+                int decalCount = ((TagFieldBlock)decalFile.SelectField($"Block:decals")).Elements.Count();
+
+                for (int i = 0; i < decalCount; i++)
+                {
+                    // Need to determine if selected albedo option can have an alpha map
+                    Dictionary<long, string> shaderHasAlpha = new Dictionary<long, string>()
+                    {
+                        { 0, "no" },
+                        { 1, "no"},
+                        { 2, "yes"},
+                        { 3, "yes" },
+                        { 4, "no" },
+                        { 5, "no" },
+                        { 6, "yes" },
+                        { 7, "yes" },
+                        { 8, "no" },
+                        { 9, "no" },
+                        { 10, "yes" }
+                    };
+
+
+                    Console.WriteLine($"\tDecal {i}:");
+                    ObjectDefinition.DecalSettings decalSettings = new ObjectDefinition.DecalSettings();
+                    // Get total number of parameteres in decal shader
+                    int paramCount = ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters")).Elements.Count();
+
+                    // Get albedo setting
+                    long albedoType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[0]/ShortInteger:short")).Data;
+
+                    // Get blend mode
+                    long blendMode = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[1]/ShortInteger:short")).Data;
+                    decalSettings.blendMode = blendMode;
+
+                    // Get tinting setting
+                    long tintType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[5]/ShortInteger:short")).Data;
+
+                    for (int j = 0; j < paramCount; j++)
+                    {
+                        string paramName = ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/StringID:parameter name")).Data;
+
+                        if (paramName == "base_map")
+                        {
+                            // Base map
+                            string baseMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
+                            Console.WriteLine($"\t\tBase map: {baseMap}");
+                            decalSettings.baseRef = baseMap;
+                        }
+                        else if (paramName == "alpha_map" && shaderHasAlpha[albedoType] == "yes")
+                        {
+                            // Alpha map, only get data if shader is currently set to use alpha map
+                            string alphaMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
+                            Console.WriteLine($"\t\tAlpha map: {alphaMap}");
+                            decalSettings.baseRef = alphaMap;
+                        }
+                        else if (paramName == "tint_color" && tintType != 0)
+                        {
+                            // Tint colour, only get data if shader is currently using tinting
+                            var colourData = ((TagFieldCustomFunctionEditor)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Block:animated parameters[0]/Custom:animation function")).Value.GetColor(0);
+                            float[] colours = { colourData.Red, colourData.Green, colourData.Blue };
+                            Console.WriteLine($"\t\tTint colour: {colours[0]}, {colours[1]}, {colours[2]}");
+                            decalSettings.tintColour= colours;
+                        }
+                        else
+                        {
+                            // Dunno
+                            continue;
+                        }
+                    }
+
+                    allDecalSettings.Add(decalSettings);
+                }
+
+                
+            }
+            catch
+            {
+                Console.WriteLine($"\tManagedBlam error when reading \"{decalPath.RelativePath}.decal_system\"");
+            }
+            finally
+            {
+                decalFile.Dispose();
+                decalData.decalSettings = allDecalSettings;
+                Console.WriteLine($"\n\tTagfile \"{decalPath.RelativePath}.decal_system\" closed\n\n");
+            }
+
+            return decalData;
         }
     }
 }

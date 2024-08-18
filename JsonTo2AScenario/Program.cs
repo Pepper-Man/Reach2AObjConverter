@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Corinth;
 using Corinth.Tags;
@@ -12,6 +13,22 @@ namespace JsonTo2AScenario
         public class ObjectDefinition
         {
             public string tag { get; set; }
+
+            // Decal-specific values
+            public class DecalSettings
+            {
+                public string baseRef { get; set; }
+                public string alphaRef { get; set; }
+                public float[] tintColour { get; set; }
+                public long blendMode { get; set; }
+            }
+
+            public List<DecalSettings> decalSettings { get; set; }
+
+            public ObjectDefinition()
+            {
+                decalSettings = new List<DecalSettings>();
+            }
         }
 
         public class ObjectPlacement
@@ -346,7 +363,9 @@ namespace JsonTo2AScenario
                 }
                 else if (objectType == "decal")
                 {
-                    ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:reference")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
+                    TagPath path = TagPath.FromPathAndExtension(def.tag, tagExt);
+                    ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:reference")).Path = path;
+                    SetDecalSystemData(def, path);
                 }
                 else
                 {
@@ -379,8 +398,6 @@ namespace JsonTo2AScenario
 
                 if (objectType != "decals")
                 {
-
-
                     // Set type
                     Console.WriteLine($"\tType: {obj.typeIndex}");
                     ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value = obj.typeIndex;
@@ -553,6 +570,81 @@ namespace JsonTo2AScenario
                 }
 
                 i++;
+            }
+        }
+    
+        public static void SetDecalSystemData(ObjectDefinition decalSys, TagPath decalSysPath)
+        {
+            var decalFile = new TagFile();
+            if (File.Exists(decalSysPath.Filename))
+            {
+
+                try
+                {
+                    decalFile.Load(decalSysPath);
+                    Console.WriteLine($"\tTagfile \"{decalSysPath.RelativePath}\" opened\n\tWriting decal material data:");
+
+                    int i = 0;
+                    foreach (ObjectDefinition.DecalSettings decalShader in decalSys.decalSettings)
+                    {
+                        ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).RemoveAllElements();
+
+                        // Set material shader based on present bitmaps
+                        if (decalShader.baseRef != null && decalShader.alphaRef == null)
+                        {
+                            // Only base map
+                            Console.WriteLine("\t\tUsing base-only material shader");
+                            TagPath baseMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\decals\\base", "material_shader");
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseMatShader;
+
+                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
+                        }
+                        else if (decalShader.baseRef != null && decalShader.alphaRef != null)
+                        {
+                            // Base + alpha map
+                            Console.WriteLine("\t\tUsing base+alpha material shader");
+                            TagPath baseAlphaMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\decals\\base_alpha", "material_shader");
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseAlphaMatShader;
+
+                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
+
+                            TagPath alphaMap = TagPath.FromPathAndExtension(decalShader.alphaRef, "bitmap");
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/StringID:parameter name")).Data = "alpha_map";
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/Reference:bitmap")).Path = alphaMap;
+                        }
+
+                        // Set blend mode
+                        ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/CharEnum:alpha blend mode")).Value = (int)decalShader.blendMode;
+                        Console.WriteLine($"\t\tBlend mode: {decalShader.blendMode}");
+
+                        // Set physics material type
+                        //((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/StringID:physics material name")).Data = "hard_metal_solid_hum";
+
+                        i++;
+                    }
+
+                }
+                catch
+                {
+                    Console.WriteLine($"\tManagedBlam error when writing to \"{decalSysPath.RelativePath}.decal_system\"");
+                }
+                finally
+                {
+                    decalFile.Save();
+                    decalFile.Dispose();
+                    Console.WriteLine($"\tTagfile \"{decalSysPath.RelativePath}.decal_system\" closed\n");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\tTag \"{decalSysPath.RelativePathWithExtension}\" does\n\tnot exist, skipping material setup for it.\n");
             }
         }
     }

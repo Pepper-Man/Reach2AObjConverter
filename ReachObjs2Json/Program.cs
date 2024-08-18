@@ -649,8 +649,6 @@ namespace Reach2AObjConverter
 
                     allDecalSettings.Add(decalSettings);
                 }
-
-                
             }
             catch
             {

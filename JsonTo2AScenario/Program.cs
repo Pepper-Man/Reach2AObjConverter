@@ -498,6 +498,9 @@ namespace JsonTo2AScenario
                     ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:decal palette index")).Value = obj.typeIndex;
                     Console.WriteLine($"\tType index: {obj.typeIndex}");
 
+                    ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/ByteFlags:flags")).RawValue = 1;
+                    Console.WriteLine($"\tPlanar flag: True");
+
                     ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/RealPoint3d:position")).Data = obj.position;
                     Console.WriteLine($"\tPosition: {obj.position[0]}, {obj.position[1]}, {obj.position[2]}");
 

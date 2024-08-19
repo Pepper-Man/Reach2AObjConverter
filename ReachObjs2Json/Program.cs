@@ -433,7 +433,7 @@ namespace Reach2AObjConverter
                         objPlacement.variantName = variant;
                     }
 
-                    int team = -1;
+                    int team = 8; // Don't set default as -1, will crash MB if it gets written to tag. 8 = neutral team
                     if (objectType == "sound scenery")
                     {
                         int volType = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value;
@@ -497,6 +497,8 @@ namespace Reach2AObjConverter
                         uint weapFlags = ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/Flags:flags")).RawValue;
                         Console.WriteLine($"\tWeapon flags: {weapFlags}");
                         objPlacement.weapFlags = weapFlags;
+
+                        team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
                     }
                     else
                     {

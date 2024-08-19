@@ -59,6 +59,11 @@ namespace JsonTo2AScenario
             // Decal specific values
             public float scaleX { get; set; }
             public float scaleY { get; set; }
+
+            // Weapon specific values
+            public long roundsLeft { get; set; }
+            public long roundsLoaded { get; set; }
+            public uint weapFlags { get; set; }
         }
 
         public class TriggerVolume
@@ -103,6 +108,8 @@ namespace JsonTo2AScenario
             public List<ObjectPlacement> cratePlacements { get; set; }
             public List<ObjectDefinition> decalDefinitions { get; set; }
             public List<ObjectPlacement> decalPlacements { get; set; }
+            public List<ObjectDefinition> weaponDefinitions { get; set; }
+            public List<ObjectPlacement> weaponPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -288,6 +295,12 @@ namespace JsonTo2AScenario
                 SetObjectDefData(tagFile, "decal", container.decalDefinitions, "decal_system");
                 Console.WriteLine("\n\n--- DECAL PLACEMENTS ---");
                 SetObjectPlaceData(tagFile, "decals", container.decalPlacements);
+
+                // WEAPONS //
+                Console.WriteLine("\n\n--- WEAPON DEFINITIONS ---");
+                SetObjectDefData(tagFile, "weapon", container.weaponDefinitions, "weapon");
+                Console.WriteLine("\n\n--- WEAPON PLACEMENTS ---");
+                SetObjectPlaceData(tagFile, "weapons", container.weaponPlacements);
             }
             catch
             {
@@ -329,6 +342,34 @@ namespace JsonTo2AScenario
                 { "objects\\equipment\\bubbleshield_module\\bubbleshield_module", "objects\\multi\\powerups\\ord_damage\\ord_damage" }
             };
 
+            // Reach weapon tag paths need to be translated to H2A weapon tag paths
+            Dictionary<string, string> weaponMapping = new Dictionary<string, string>()
+            {
+                { "objects\\weapons\\melee\\energy_sword\\energy_sword", "objects\\weapons\\h2a_energy_sword\\h2a_energy_sword" },
+                { "objects\\weapons\\melee\\gravity_hammer\\gravity_hammer", "objects\\weapons\\h2a_energy_sword_infected\\h2a_energy_sword_infected"},
+                { "objects\\weapons\\multiplayer\\assault_bomb\\assault_bomb", "objects\\weapons\\multiplayer\\h2a_assault_bomb\\h2a_assault_bomb"},
+                { "objects\\weapons\\multiplayer\\flag\\flag", "objects\\weapons\\multiplayer\\flag\\flag" },
+                { "objects\\weapons\\multiplayer\\skull\\skull", "objects\\weapons\\h2a_oddball\\h2a_oddball" },
+                { "objects\\weapons\\pistol\\magnum\\magnum", "objects\\weapons\\h2a_magnum\\h2a_magnum" },
+                { "objects\\weapons\\pistol\\needler\\needler", "objects\\weapons\\h2a_needler\\h2a_needler" },
+                { "objects\\weapons\\pistol\\plasma_pistol\\plasma_pistol", "objects\\weapons\\h2a_plasma_pistol\\h2a_plasma_pistol" },
+                { "objects\\weapons\\rifle\\assault_rifle\\assault_rifle", "objects\\weapons\\h2a_assault_rifle\\h2a_assault_rifle" },
+                { "objects\\weapons\\rifle\\concussion_rifle\\concussion_rifle", "objects\\weapons\\h2a_brute_shot\\h2a_brute_shot" },
+                { "objects\\weapons\\rifle\\dmr\\dmr", "objects\\weapons\\h2a_battle_rifle\\h2a_br" },
+                { "objects\\weapons\\rifle\\focus_rifle\\focus_rifle", "objects\\weapons\\h2a_particle_beam_rifle\\h2a_beam_rifle" },
+                { "objects\\weapons\\rifle\\grenade_launcher\\grenade_launcher", "objects\\weapons\\h2a_brute_shot\\h2a_brute_shot" },
+                { "objects\\weapons\\rifle\\needle_rifle\\needle_rifle", "objects\\weapons\\h2a_covenant_carbine\\h2a_covenant_carbine" },
+                { "objects\\weapons\\rifle\\plasma_repeater\\plasma_repeater", "objects\\weapons\\h2a_brute_plasma_rifle\\h2a_brute_plasma" },
+                { "objects\\weapons\\rifle\\plasma_rifle\\plasma_rifle", "objects\\weapons\\h2a_plasma_rifle\\h2a_plasma_rifle" },
+                { "objects\\weapons\\rifle\\shotgun\\shotgun", "objects\\weapons\\h2a_shotgun\\h2a_shotgun" },
+                { "objects\\weapons\\rifle\\sniper_rifle\\sniper_rifle", "objects\\weapons\\h2a_sniper_rifle\\h2a_sniper_rifle" },
+                { "objects\\weapons\\rifle\\spike_rifle\\spike_rifle", "objects\\weapons\\h2a_brute_plasma_rifle\\h2a_brute_plasma" },
+                { "objects\\weapons\\support_high\\flak_cannon\\flak_cannon", "objects\\weapons\\h2a_fuel_rod_gun\\h2a_fuel_rod_gun" },
+                { "objects\\weapons\\support_high\\plasma_launcher\\plasma_launcher", "objects\\weapons\\h2a_fuel_rod_gun\\h2a_fuel_rod_gun" },
+                { "objects\\weapons\\support_high\\rocket_launcher\\rocket_launcher", "objects\\weapons\\h2a_rocket_launcher\\h2a_rocket_launcher" },
+                { "objects\\weapons\\support_high\\spartan_laser\\spartan_laser", "objects\\weapons\\h2a_rocket_launcher\\h2a_rocket_launcher" }
+            };
+
             ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).RemoveAllElements();  
             int i = 0;
             foreach (var def in objDefinitions)
@@ -361,6 +402,18 @@ namespace JsonTo2AScenario
                         ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
                     }
                 }
+                else if (objectType == "weapon")
+                {
+                    try
+                    {
+                        ((TagFieldReference)tagFile.SelectField($"Block:weapon palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(weaponMapping[def.tag], tagExt);
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        Console.WriteLine($"\nKey not found in weapon mapping dict for {def.tag}, using Reach path");
+                        ((TagFieldReference)tagFile.SelectField($"Block:weapon palette[{i}]/Reference:name")).Path = TagPath.FromPathAndExtension(def.tag, tagExt);
+                    }
+                }
                 else if (objectType == "decal")
                 {
                     TagPath path = TagPath.FromPathAndExtension(def.tag, tagExt);
@@ -386,7 +439,8 @@ namespace JsonTo2AScenario
                 { "vehicles", 1 },
                 { "equipment", 3 },
                 { "sound scenery", 10 },
-                { "crates", 11 }
+                { "crates", 11 },
+                { "weapons", 2 }
             };
 
             int i = 0;
@@ -490,6 +544,21 @@ namespace JsonTo2AScenario
                         // Set sustain Db
                         Console.WriteLine($"\tSustain Db: {obj.sustainDb}");
                         ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data = obj.sustainDb;
+                    }
+                    // Weapon specific settings
+                    else if (objectType == "weapons")
+                    {
+                        // Set rounds left
+                        Console.WriteLine($"\tRounds left: {obj.roundsLeft}");
+                        ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds left")).Data = obj.roundsLeft;
+
+                        // Set rounds loaded
+                        Console.WriteLine($"\tRounds loaded: {obj.roundsLoaded}");
+                        ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds loaded")).Data = obj.roundsLoaded;
+
+                        // Set weapon-specific flags
+                        Console.WriteLine($"\tWeapon flags: {obj.weapFlags}");
+                        ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/Flags:flags")).RawValue = obj.weapFlags;
                     }
                 }
                 else

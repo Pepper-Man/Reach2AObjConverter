@@ -59,6 +59,11 @@ namespace Reach2AObjConverter
             // Decal specific values
             public float scaleX { get; set; }
             public float scaleY { get; set; }
+
+            // Weapon specific values
+            public long roundsLeft { get; set; }
+            public long roundsLoaded { get; set; }
+            public uint weapFlags { get; set; }
         }
 
         public class TriggerVolume
@@ -109,6 +114,8 @@ namespace Reach2AObjConverter
             public List<ObjectPlacement> cratePlacements { get; set; }
             public List<ObjectDefinition> decalDefinitions { get; set; }
             public List<ObjectPlacement> decalPlacements { get; set; }
+            public List<ObjectDefinition> weaponDefinitions { get; set; }
+            public List<ObjectPlacement> weaponPlacements { get; set; }
         }
 
         public class FilePathSanitiser
@@ -222,6 +229,8 @@ namespace Reach2AObjConverter
             List<ObjectPlacement> cratePlaceData = new List<ObjectPlacement>();
             List<ObjectDefinition> decalDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> decalPlaceData = new List<ObjectPlacement>();
+            List<ObjectDefinition> weapDefData = new List<ObjectDefinition>();
+            List<ObjectPlacement> weapPlaceData = new List<ObjectPlacement>();
 
             try
             {
@@ -260,6 +269,11 @@ namespace Reach2AObjConverter
                 var decalData = GetObjectData(tagFile, "decals");
                 decalDefData = decalData.definitions;
                 decalPlaceData = decalData.placements;
+
+                // WEAPONS //
+                var weapData = GetObjectData(tagFile, "weapons");
+                weapDefData = weapData.definitions;
+                weapPlaceData = weapData.placements;
             }
             catch
             {
@@ -285,7 +299,9 @@ namespace Reach2AObjConverter
                     crateDefinitions = crateDefData,
                     cratePlacements = cratePlaceData,
                     decalDefinitions = decalDefData,
-                    decalPlacements = decalPlaceData
+                    decalPlacements = decalPlaceData,
+                    weaponDefinitions = weapDefData,
+                    weaponPlacements = weapPlaceData
                 };
 
                 // Serialize to JSON
@@ -328,6 +344,10 @@ namespace Reach2AObjConverter
             {
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:decal palette")).Elements.Count();
             }
+            else if (objectType == "weapons")
+            {
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:weapon palette")).Elements.Count();
+            }
             else
             {
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).Elements.Count();
@@ -353,6 +373,10 @@ namespace Reach2AObjConverter
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                     objDef = GetDecalShaderData(objDef, path);
+                }
+                else if (objectType == "weapons")
+                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:weapon palette[{i}]/Reference:name")).Path;
                 }
                 else
                 {
@@ -459,6 +483,20 @@ namespace Reach2AObjConverter
                         float susDb = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data;
                         Console.WriteLine($"\tSustain Db: {susDb}");
                         objPlacement.sustainDb = susDb;
+                    }
+                    else if (objectType == "weapons")
+                    {
+                        long rndLeft = ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds left")).Data;
+                        Console.WriteLine($"\tRounds left: {rndLeft}");
+                        objPlacement.roundsLeft = rndLeft;
+
+                        long rndLoad = ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds loaded")).Data;
+                        Console.WriteLine($"\tRounds loaded: {rndLoad}");
+                        objPlacement.roundsLoaded = rndLoad;
+
+                        uint weapFlags = ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/Flags:flags")).RawValue;
+                        Console.WriteLine($"\tWeapon flags: {weapFlags}");
+                        objPlacement.weapFlags = weapFlags;
                     }
                     else
                     {

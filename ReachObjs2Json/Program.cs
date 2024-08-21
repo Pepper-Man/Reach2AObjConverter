@@ -388,7 +388,7 @@ namespace Reach2AObjConverter
             Console.WriteLine($"\n--- {objectType.ToUpper()} ---\n");
 
             // Dictionary to handle the annoying differences in block names between scenario and resource tags
-            Dictionary<Tuple<string, string>, string> dict = new Dictionary<Tuple<string, string>, string>
+            Dictionary<Tuple<string, string>, string> blockNameMapping = new Dictionary<Tuple<string, string>, string>
             {
                 { Tuple.Create("scenerys", "scenario"), "scenery" },
                 { Tuple.Create("scenerys", "resource"), "scenerys" },
@@ -414,11 +414,11 @@ namespace Reach2AObjConverter
             int objDefCount;
             if (objectType == "decals")
             {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{dict[Tuple.Create("decals_palette", tagType)]}palette")).Elements.Count();
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{blockNameMapping[Tuple.Create("decals_palette", tagType)]}palette")).Elements.Count();
             }
             else if (objectType == "sound_scenerys")
             {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{dict[Tuple.Create("sound_scenerys_palette", tagType)]} palette")).Elements.Count();
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{blockNameMapping[Tuple.Create("sound_scenerys_palette", tagType)]} palette")).Elements.Count();
             }
             else
             {
@@ -434,14 +434,14 @@ namespace Reach2AObjConverter
 
                 if (objectType == "decals")
                 {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:{dict[Tuple.Create("decals_palette", tagType)]}palette[{i}]/Reference:reference")).Path;
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{blockNameMapping[Tuple.Create("decals_palette", tagType)]}palette[{i}]/Reference:reference")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                     objDef = GetDecalShaderData(objDef, path);
                 }
                 else if (objectType == "sound_scenerys")
                 {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:{dict[Tuple.Create("sound_scenerys_palette", tagType)]} palette[{i}]/Reference:name")).Path;
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{blockNameMapping[Tuple.Create("sound_scenerys_palette", tagType)]} palette[{i}]/Reference:name")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                 }
@@ -455,7 +455,7 @@ namespace Reach2AObjConverter
                 objDefData.Add(objDef);
             }
 
-            string blockString = dict[Tuple.Create(objectType, tagType)];
+            string blockString = blockNameMapping[Tuple.Create(objectType, tagType)];
 
             // Get total number of placed objects
             int objPlacedCount = ((TagFieldBlock)tagFile.SelectField($"Block:{blockString}")).Elements.Count();
@@ -464,7 +464,7 @@ namespace Reach2AObjConverter
             for (int i = 0; i < objPlacedCount; i++)
             {
                 ObjectPlacement objPlacement = new ObjectPlacement();
-                Console.WriteLine($"{dict[Tuple.Create(objectType, "scenario")]} placement {i}:");
+                Console.WriteLine($"{blockNameMapping[Tuple.Create(objectType, "scenario")]} placement {i}:");
                 
                 if (objectType != "decals")
                 {

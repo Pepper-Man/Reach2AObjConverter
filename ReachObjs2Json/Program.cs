@@ -268,63 +268,38 @@ namespace Reach2AObjConverter
                     decoratorResource = ((TagFieldReference)tagFile.SelectField($"Block:scenario resources[0]/Block:new split resources[0]/Reference:decorator resource")).Path
                 };
 
+                ResultsContainer GetResultsContainer(TagPath resource, string tagType)
+                {
+                    if (resource == null)
+                    {
+                        return GetObjectData(tagFile, tagType);
+                    }
+                    else
+                    {
+                        using (TagFile resourceTag = new TagFile(resource))
+                        {
+                            return GetObjectData(resourceTag, tagType);
+                        }
+                    }
+                }
+
                 // SCENERY //
-                ResultsContainer scenData;
-                if (scenarioResTags.sceneryResource == null)
-                {
-                    scenData = GetObjectData(tagFile, "scenerys");
-                }
-                else
-                {
-                    TagFile sceneryTag = new TagFile(scenarioResTags.sceneryResource);
-                    scenData = GetObjectData(sceneryTag, "scenerys");
-                    sceneryTag.Dispose();
-                }
+                ResultsContainer scenData = GetResultsContainer(scenarioResTags.sceneryResource, "scenerys");
                 scenDefData = scenData.definitions;
                 scenPlaceData = scenData.placements;
 
-                // VEHICLES
-                ResultsContainer vehiData;
-                if (scenarioResTags.vehicleResource == null)
-                {
-                    vehiData = GetObjectData(tagFile, "vehicles");
-                }
-                else
-                {
-                    TagFile vehicleTag = new TagFile(scenarioResTags.vehicleResource);
-                    vehiData = GetObjectData(vehicleTag, "vehicles");
-                    vehicleTag.Dispose();
-                }
+                // VEHICLES //
+                ResultsContainer vehiData = GetResultsContainer(scenarioResTags.vehicleResource, "vehicles");
                 vehiDefData = vehiData.definitions;
                 vehiPlaceData = vehiData.placements;
 
                 // EQUIPMENT //
-                ResultsContainer eqipData;
-                if (scenarioResTags.equipmentResource == null)
-                {
-                    eqipData = GetObjectData(tagFile, "equipments");
-                }
-                else
-                {
-                    TagFile equipmentTag = new TagFile(scenarioResTags.equipmentResource);
-                    eqipData = GetObjectData(equipmentTag, "equipments");
-                    equipmentTag.Dispose();
-                }
+                ResultsContainer eqipData = GetResultsContainer(scenarioResTags.equipmentResource, "equipments");
                 eqipDefData = eqipData.definitions;
                 eqipPlaceData = eqipData.placements;
 
                 // SOUND SCENERY //
-                ResultsContainer ssceData;
-                if (scenarioResTags.soundscenResource == null)
-                {
-                    ssceData = GetObjectData(tagFile, "sound_scenerys");
-                }
-                else
-                {
-                    TagFile soundscenTag = new TagFile(scenarioResTags.soundscenResource);
-                    ssceData = GetObjectData(soundscenTag, "sound_scenerys");
-                    soundscenTag.Dispose();
-                }
+                ResultsContainer ssceData = GetResultsContainer(scenarioResTags.soundscenResource, "sound_scenerys");
                 ssceDefData = ssceData.definitions;
                 sscePlaceData = ssceData.placements;
 
@@ -342,47 +317,17 @@ namespace Reach2AObjConverter
                 }
 
                 // CRATES (Crate data is stored in the scenery resource tag, if it exists) //
-                ResultsContainer crateData;
-                if (scenarioResTags.sceneryResource == null)
-                {
-                    crateData = GetObjectData(tagFile, "crates");
-                }
-                else
-                {
-                    TagFile crateTag = new TagFile(scenarioResTags.sceneryResource);
-                    crateData = GetObjectData(crateTag, "crates");
-                    crateTag.Dispose();
-                }
+                ResultsContainer crateData = GetResultsContainer(scenarioResTags.sceneryResource, "crates");
                 crateDefData = crateData.definitions;
                 cratePlaceData = crateData.placements;
 
                 // DECALS //
-                ResultsContainer decalData;
-                if (scenarioResTags.decalResource == null)
-                {
-                    decalData = GetObjectData(tagFile, "decals");
-                }
-                else
-                {
-                    TagFile decalTag = new TagFile(scenarioResTags.decalResource);
-                    decalData = GetObjectData(decalTag, "decals");
-                    decalTag.Dispose();
-                }
+                ResultsContainer decalData = GetResultsContainer(scenarioResTags.decalResource, "decals");
                 decalDefData = decalData.definitions;
                 decalPlaceData = decalData.placements;
 
                 // WEAPONS //
-                ResultsContainer weapData;
-                if (scenarioResTags.weaponResource == null)
-                {
-                    weapData = GetObjectData(tagFile, "weapons");
-                }
-                else
-                {
-                    TagFile weapTag = new TagFile(scenarioResTags.weaponResource);
-                    weapData = GetObjectData(weapTag, "weapons");
-                    weapTag.Dispose();
-                }
+                ResultsContainer weapData = GetResultsContainer(scenarioResTags.weaponResource, "weapons");
                 weapDefData = weapData.definitions;
                 weapPlaceData = weapData.placements;
             }
@@ -440,40 +385,17 @@ namespace Reach2AObjConverter
             ResultsContainer results = new ResultsContainer();
             List<ObjectDefinition> objDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> objPlaceData = new List<ObjectPlacement>();
+            Console.WriteLine($"\n--- {objectType.ToUpper()} ---\n");
 
             // Get total number of object definitions
             int objDefCount;
-            if (objectType == "scenerys")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:scenery palette")).Elements.Count();
-            }
-            else if (objectType == "vehicles")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:vehicle palette")).Elements.Count();
-            }
-            else if (objectType == "equipments")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:equipment palette")).Elements.Count();
-            }
-            else if (objectType == "sound_scenerys")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:sound_scenery palette")).Elements.Count();
-            }
-            else if (objectType == "crates")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:crate palette")).Elements.Count();
-            }
-            else if (objectType == "decals")
+            if (objectType == "decals")
             {
                 objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:palette")).Elements.Count();
             }
-            else if (objectType == "weapons")
-            {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:weapon palette")).Elements.Count();
-            }
             else
             {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType} palette")).Elements.Count();
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType.Substring(0, objectType.Length - 1)} palette")).Elements.Count();
             }
             
             // Get all object definition data
@@ -482,47 +404,21 @@ namespace Reach2AObjConverter
                 ObjectDefinition objDef = new ObjectDefinition();
                 Console.WriteLine($"{objectType} definition {i}:");
                 TagPath path;
-                if (objectType =="scenerys")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:scenery palette[{i}]/Reference:name")).Path;
-                }
-                else if (objectType == "vehicles")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:vehicle palette[{i}]/Reference:name")).Path;
-                }
-                else if (objectType == "equipments")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:equipment palette[{i}]/Reference:name")).Path;
-                }
-                else if (objectType == "sound_scenerys")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:sound_scenery palette[{i}]/Reference:name")).Path;
-                }
-                else if (objectType == "crates")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:crate palette[{i}]/Reference:name")).Path;
-                }
-                else if (objectType == "decals")
+
+                if (objectType == "decals")
                 {
                     path = ((TagFieldReference)tagFile.SelectField($"Block:palette[{i}]/Reference:reference")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                     objDef = GetDecalShaderData(objDef, path);
                 }
-                else if (objectType == "weapons")
-                {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:weapon palette[{i}]/Reference:name")).Path;
-                }
                 else
                 {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:{objectType} palette[{i}]/Reference:name")).Path;
-                }
-                
-                if (objectType != "decals")
-                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{objectType.Substring(0, objectType.Length - 1)} palette[{i}]/Reference:name")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                 }
+                
                 objDefData.Add(objDef);
             }
 
@@ -676,6 +572,7 @@ namespace Reach2AObjConverter
     
         public static List<TriggerVolume> GetTrigVolData(TagFile tagFile)
         {
+            Console.WriteLine("\n--- TRIGGER VOLUMES ---\n");
             List<TriggerVolume> triggerVolumes = new List<TriggerVolume>();
 
             // Get total number of trigger volumes

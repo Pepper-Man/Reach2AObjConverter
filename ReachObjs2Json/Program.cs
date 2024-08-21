@@ -272,13 +272,13 @@ namespace Reach2AObjConverter
                 {
                     if (resource == null)
                     {
-                        return GetObjectData(tagFile, tagType);
+                        return GetObjectData(tagFile, tagType, "scenario");
                     }
                     else
                     {
                         using (TagFile resourceTag = new TagFile(resource))
                         {
-                            return GetObjectData(resourceTag, tagType);
+                            return GetObjectData(resourceTag, tagType, "resource");
                         }
                     }
                 }
@@ -292,7 +292,7 @@ namespace Reach2AObjConverter
                 ResultsContainer vehiData = GetResultsContainer(scenarioResTags.vehicleResource, "vehicles");
                 vehiDefData = vehiData.definitions;
                 vehiPlaceData = vehiData.placements;
-
+                
                 // EQUIPMENT //
                 ResultsContainer eqipData = GetResultsContainer(scenarioResTags.equipmentResource, "equipments");
                 eqipDefData = eqipData.definitions;
@@ -380,18 +380,45 @@ namespace Reach2AObjConverter
             ManagedBlamSystem.Stop();
         }
     
-        public static ResultsContainer GetObjectData(TagFile tagFile, string objectType)
+        public static ResultsContainer GetObjectData(TagFile tagFile, string objectType, string tagType)
         {
             ResultsContainer results = new ResultsContainer();
             List<ObjectDefinition> objDefData = new List<ObjectDefinition>();
             List<ObjectPlacement> objPlaceData = new List<ObjectPlacement>();
             Console.WriteLine($"\n--- {objectType.ToUpper()} ---\n");
 
+            // Dictionary to handle the annoying differences in block names between scenario and resource tags
+            Dictionary<Tuple<string, string>, string> dict = new Dictionary<Tuple<string, string>, string>
+            {
+                { Tuple.Create("scenerys", "scenario"), "scenery" },
+                { Tuple.Create("scenerys", "resource"), "scenerys" },
+                { Tuple.Create("vehicles", "scenario"), "vehicles" },
+                { Tuple.Create("vehicles", "resource"), "vehicles" },
+                { Tuple.Create("equipments", "scenario"), "equipment" },
+                { Tuple.Create("equipments", "resource"), "equipments" },
+                { Tuple.Create("sound_scenerys", "scenario"), "sound scenery" },
+                { Tuple.Create("sound_scenerys", "resource"), "sound_scenerys" },
+                { Tuple.Create("sound_scenerys_palette", "resource"), "sound_scenery" },
+                { Tuple.Create("sound_scenerys_palette", "scenario"), "sound scenery" },
+                { Tuple.Create("crates", "scenario"), "crates" },
+                { Tuple.Create("crates", "resource"), "crates" },
+                { Tuple.Create("decals", "scenario"), "decals" },
+                { Tuple.Create("decals", "resource"), "decals" },
+                { Tuple.Create("decals_palette", "scenario"), "decal " },
+                { Tuple.Create("decals_palette", "resource"), "" },
+                { Tuple.Create("weapons", "scenario"), "weapons" },
+                { Tuple.Create("weapons", "resource"), "weapons" }
+            };
+
             // Get total number of object definitions
             int objDefCount;
             if (objectType == "decals")
             {
-                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:palette")).Elements.Count();
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{dict[Tuple.Create("decals_palette", tagType)]}palette")).Elements.Count();
+            }
+            else if (objectType == "sound_scenerys")
+            {
+                objDefCount = ((TagFieldBlock)tagFile.SelectField($"Block:{dict[Tuple.Create("sound_scenerys_palette", tagType)]} palette")).Elements.Count();
             }
             else
             {
@@ -407,10 +434,16 @@ namespace Reach2AObjConverter
 
                 if (objectType == "decals")
                 {
-                    path = ((TagFieldReference)tagFile.SelectField($"Block:palette[{i}]/Reference:reference")).Path;
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{dict[Tuple.Create("decals_palette", tagType)]}palette[{i}]/Reference:reference")).Path;
                     Console.WriteLine($"\tTag path: {path}\n");
                     objDef.tag = path.RelativePath;
                     objDef = GetDecalShaderData(objDef, path);
+                }
+                else if (objectType == "sound_scenerys")
+                {
+                    path = ((TagFieldReference)tagFile.SelectField($"Block:{dict[Tuple.Create("sound_scenerys_palette", tagType)]} palette[{i}]/Reference:name")).Path;
+                    Console.WriteLine($"\tTag path: {path}\n");
+                    objDef.tag = path.RelativePath;
                 }
                 else
                 {
@@ -422,118 +455,120 @@ namespace Reach2AObjConverter
                 objDefData.Add(objDef);
             }
 
+            string blockString = dict[Tuple.Create(objectType, tagType)];
+
             // Get total number of placed objects
-            int objPlacedCount = ((TagFieldBlock)tagFile.SelectField($"Block:{objectType}")).Elements.Count();
+            int objPlacedCount = ((TagFieldBlock)tagFile.SelectField($"Block:{blockString}")).Elements.Count();
 
             // Get all object data
             for (int i = 0; i < objPlacedCount; i++)
             {
                 ObjectPlacement objPlacement = new ObjectPlacement();
-                Console.WriteLine($"{objectType} placement {i}:");
-
+                Console.WriteLine($"{dict[Tuple.Create(objectType, "scenario")]} placement {i}:");
+                
                 if (objectType != "decals")
                 {
-                    int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:type")).Value;
+                    int type = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{blockString}[{i}]/ShortBlockIndex:type")).Value;
                     Console.WriteLine($"\tType index: {type}");
                     objPlacement.typeIndex = type;
 
-                    int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{objectType}[{i}]/ShortBlockIndex:name")).Value;
+                    int name = ((TagFieldBlockIndex)tagFile.SelectField($"Block:{blockString}[{i}]/ShortBlockIndex:name")).Value;
                     Console.WriteLine($"\tName index: {name}");
                     objPlacement.nameIndex = name;
 
-                    uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Flags:placement flags")).RawValue;
+                    uint flags = ((TagFieldFlags)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:object data/Flags:placement flags")).RawValue;
                     Console.WriteLine($"\tFlags: {type}");
                     objPlacement.flags = flags;
 
-                    float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/Real:scale")).Data;
+                    float scale = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:object data/Real:scale")).Data;
                     Console.WriteLine($"\tScale: {scale}");
                     objPlacement.scale = scale;
 
-                    float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealPoint3d:position")).Data;
+                    float[] pos = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:object data/RealPoint3d:position")).Data;
                     Console.WriteLine($"\tPosition: {pos[0]}, {pos[1]}, {pos[2]}");
                     objPlacement.position = pos;
 
-                    float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
+                    float[] rot = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:object data/RealEulerAngles3d:rotation")).Data;
                     Console.WriteLine($"\tRotation: {rot[0]}, {rot[1]}, {rot[2]}");
                     objPlacement.rotation = rot;
 
-                    if (objectType != "equipments" && objectType != "sound_scenerys")
+                    if (blockString != "equipments" && blockString != "equipment" && blockString != "sound scenery" && blockString != "sound_scenerys")
                     {
-                        string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:permutation data/StringID:variant name")).Data;
+                        string variant = ((TagFieldElementStringID)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:permutation data/StringID:variant name")).Data;
                         Console.WriteLine($"\tVariant name: {variant}");
                         objPlacement.variantName = variant;
                     }
 
                     int team = 8; // Don't set default as -1, will crash MB if it gets written to tag. 8 = neutral team
-                    if (objectType == "sound_scenerys")
+                    if (objectType == "sound_scenerys" || objectType == "sound scenery")
                     {
-                        int volType = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value;
+                        int volType = ((TagFieldEnum)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/LongEnum:volume type")).Value;
                         Console.WriteLine($"\tVolume type: {volType}");
                         objPlacement.volumeType = volType;
 
-                        float height = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:height")).Data;
+                        float height = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Real:height")).Data;
                         Console.WriteLine($"\tHeight: {height}");
                         objPlacement.height = height;
 
-                        float[] coneBounds = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data;
+                        float[] coneBounds = ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/AngleBounds:override cone angle bounds")).Data;
                         Console.WriteLine($"\tCone bounds: {coneBounds[0]}, {coneBounds[1]}");
                         objPlacement.coneBounds = coneBounds;
 
-                        float coneGain = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data;
+                        float coneGain = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Real:override outer cone gain")).Data;
                         Console.WriteLine($"\tCone gain: {coneGain}");
                         objPlacement.coneGain = coneGain;
 
-                        float dntObstrDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data;
+                        float dntObstrDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't obstruct distance")).Data;
                         Console.WriteLine($"\tDon't obstruct distance: {dntObstrDist}");
                         objPlacement.obstrDistance = dntObstrDist;
 
-                        float dntPlayDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data;
+                        float dntPlayDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:don't play distance")).Data;
                         Console.WriteLine($"\tDon't play distance: {dntPlayDist}");
                         objPlacement.dntPlyDistance = dntPlayDist;
 
-                        float attackDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data;
+                        float attackDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:attack distance")).Data;
                         Console.WriteLine($"\tAttack distance: {attackDist}");
                         objPlacement.atkDistance = attackDist;
 
-                        float minDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data;
+                        float minDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:minimum distance")).Data;
                         Console.WriteLine($"\tMinimum distance: {minDist}");
                         objPlacement.minDistance = minDist;
 
-                        float susBegDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data;
+                        float susBegDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain begin distance")).Data;
                         Console.WriteLine($"\tSustain begin distance: {susBegDist}");
                         objPlacement.susBegDistance = susBegDist;
 
-                        float susEndDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data;
+                        float susEndDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain end distance")).Data;
                         Console.WriteLine($"\tSustain end distance: {susEndDist}");
                         objPlacement.susEndDistance = susEndDist;
 
-                        float maxDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data;
+                        float maxDist = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:maximum distance")).Data;
                         Console.WriteLine($"\tMaximum distance: {maxDist}");
                         objPlacement.maxDistance = maxDist;
 
-                        float susDb = ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data;
+                        float susDb = ((TagFieldElementSingle)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:sound_scenery/Struct:override distance parameters/Real:sustain db")).Data;
                         Console.WriteLine($"\tSustain Db: {susDb}");
                         objPlacement.sustainDb = susDb;
                     }
                     else if (objectType == "weapons")
                     {
-                        long rndLeft = ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds left")).Data;
+                        long rndLeft = ((TagFieldElementInteger)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:weapon data/ShortInteger:rounds left")).Data;
                         Console.WriteLine($"\tRounds left: {rndLeft}");
                         objPlacement.roundsLeft = rndLeft;
 
-                        long rndLoad = ((TagFieldElementInteger)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/ShortInteger:rounds loaded")).Data;
+                        long rndLoad = ((TagFieldElementInteger)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:weapon data/ShortInteger:rounds loaded")).Data;
                         Console.WriteLine($"\tRounds loaded: {rndLoad}");
                         objPlacement.roundsLoaded = rndLoad;
 
-                        uint weapFlags = ((TagFieldFlags)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:weapon data/Flags:flags")).RawValue;
+                        uint weapFlags = ((TagFieldFlags)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:weapon data/Flags:flags")).RawValue;
                         Console.WriteLine($"\tWeapon flags: {weapFlags}");
                         objPlacement.weapFlags = weapFlags;
 
-                        team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+                        team = ((TagFieldEnum)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
                     }
                     else
                     {
-                        team = ((TagFieldEnum)tagFile.SelectField($"Block:{objectType}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
+                        team = ((TagFieldEnum)tagFile.SelectField($"Block:{blockString}[{i}]/Struct:multiplayer data/CharEnum:owner team")).Value;
                     }
                     Console.WriteLine($"\tOwner team: {team}\n");
                     objPlacement.ownerTeam = team;

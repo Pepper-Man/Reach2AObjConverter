@@ -21,8 +21,7 @@ namespace Reach2AObjConverter
                 public string alphaRef { get; set; }
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
-                public float scaleX { get; set; }
-                public float scaleY { get; set; }
+                public float[] scaleXY { get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -780,8 +779,7 @@ namespace Reach2AObjConverter
                                 scaleY = (float)height / width;
                             }
 
-                            decalSettings.scaleX = scaleX;
-                            decalSettings.scaleY = scaleY;
+                            decalSettings.scaleXY = new float[] { scaleX, scaleY };
                         }
                     }
 

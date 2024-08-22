@@ -21,6 +21,7 @@ namespace JsonTo2AScenario
                 public string alphaRef { get; set; }
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
+                public float[] scaleXY { get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -576,11 +577,29 @@ namespace JsonTo2AScenario
                     ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/RealQuaternion:rotation")).Data = obj.rotation;
                     Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
 
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = obj.scaleX;
-                    Console.WriteLine($"\tScale X: {obj.scaleX}");
+                    // Get default scaling data from decal system tag
+                    float scaleX = 1;
+                    float scaleY = 1;
+                    TagPath decalSystem = ((TagFieldReference)tagFile.SelectField($"Block:decal palette[{obj.typeIndex}]/Reference:reference")).Path;
 
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
-                    Console.WriteLine($"\tScale Y: {obj.scaleY}");
+                    try
+                    {
+                        using (TagFile decSysTag = new TagFile(decalSystem))
+                        {
+                            scaleX = ((TagFieldElementArraySingle)decSysTag.SelectField($"RealPoint2d:decal scale override")).Data[0];
+                            scaleY = ((TagFieldElementArraySingle)decSysTag.SelectField($"RealPoint2d:decal scale override")).Data[1];
+                        }
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Error when accessing decal system to get default scale, or it does not exist");
+                    }
+                    
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = scaleX;
+                    Console.WriteLine($"\tScale X: {scaleX}");
+
+                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = scaleY;
+                    Console.WriteLine($"\tScale Y: {scaleY}");
                 }
 
                 i++;
@@ -696,8 +715,8 @@ namespace JsonTo2AScenario
                         ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/CharEnum:alpha blend mode")).Value = (int)decalShader.blendMode;
                         Console.WriteLine($"\t\tBlend mode: {decalShader.blendMode}");
 
-                        // Set physics material type
-                        //((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/StringID:physics material name")).Data = "hard_metal_solid_hum";
+                        // Set scale data determined from bitmap
+                        ((TagFieldElementArraySingle)decalFile.SelectField($"RealPoint2d:decal scale override")).Data = decalShader.scaleXY;
 
                         i++;
                     }

@@ -21,6 +21,8 @@ namespace Reach2AObjConverter
                 public string alphaRef { get; set; }
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
+                public float scaleX { get; set; }
+                public float scaleY { get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -750,7 +752,36 @@ namespace Reach2AObjConverter
                         else
                         {
                             // Dunno
+                            Console.WriteLine("\tUnused paramter, ignore");
                             continue;
+                        }
+                    }
+
+                    // Need to determine decal system scaling if diffuse bitmap is not square
+                    if (decalSettings.baseRef != null)
+                    {
+                        TagPath diffusePath = TagPath.FromPathAndExtension(decalSettings.baseRef, "bitmap");
+
+                        using (TagFile diffuseTag = new TagFile(diffusePath))
+                        {
+                            long width = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:width")).Data;
+                            long height = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:height")).Data;
+                            float scaleX = 1;
+                            float scaleY = 1;
+
+                            if (height > width)
+                            {
+                                // Bitmap is thin and long
+                                scaleX = (float)width / height;
+                            }
+                            else if (width > height)
+                            {
+                                // Bitmap is wide and short
+                                scaleY = (float)height / width;
+                            }
+
+                            decalSettings.scaleX = scaleX;
+                            decalSettings.scaleY = scaleY;
                         }
                     }
 

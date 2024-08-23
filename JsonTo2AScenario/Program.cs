@@ -577,11 +577,42 @@ namespace JsonTo2AScenario
                     ((TagFieldElementArraySingle)tagFile.SelectField($"Block:{objectType}[{i}]/RealQuaternion:rotation")).Data = obj.rotation;
                     Console.WriteLine($"\tRotation: {obj.rotation[0]}, {obj.rotation[1]}, {obj.rotation[2]}");
                     
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = obj.scaleX;
-                    Console.WriteLine($"\tScale X: {obj.scaleX}");
+                    // Get default scaling data from decal system tag
+                    TagPath decalSystem = ((TagFieldReference)tagFile.SelectField($"Block:decal palette[{obj.typeIndex}]/Reference:reference")).Path;
 
                     ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
                     Console.WriteLine($"\tScale Y: {obj.scaleY}");
+                    try
+                    {
+                        using (TagFile decSysTag = new TagFile(decalSystem))
+                        {
+                            float scaleX = ((TagFieldElementArraySingle)decSysTag.SelectField($"RealPoint2d:decal scale override")).Data[0];
+                            float scaleY = ((TagFieldElementArraySingle)decSysTag.SelectField($"RealPoint2d:decal scale override")).Data[1];
+
+                            if (scaleX != 1.0f || scaleY != 1.0f)
+                            {
+                                ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = scaleX;
+                                Console.WriteLine($"\tScale X: {scaleX}");
+
+                                ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = scaleY;
+                                Console.WriteLine($"\tScale Y: {scaleY}");
+                            }
+                            else
+                            {
+                                ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale x")).Data = obj.scaleX;
+                                Console.WriteLine($"\tScale X: {obj.scaleX}");
+
+                                ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
+                                Console.WriteLine($"\tScale Y: {obj.scaleY}");
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Error when accessing decal system to get default scale, or it does not exist");
+                    }
+
+                    
                 }
 
                 i++;
@@ -697,12 +728,24 @@ namespace JsonTo2AScenario
                         ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/CharEnum:alpha blend mode")).Value = (int)decalShader.blendMode;
                         Console.WriteLine($"\t\tBlend mode: {decalShader.blendMode}");
 
-                        // Set radius to 1 regardless to combat Reach scale getting combined with radius
+                        // Set radius to 1 if square to combat Reach scale getting combined with radius
                         int decalCount = ((TagFieldBlock)decalFile.SelectField($"Block:decals")).Elements.Count;
                         for (int x = 0; x < decalCount; x++)
                         {
-                            ((TagFieldElementArraySingle)decalFile.SelectField($"RealPoint2d:decal scale override[{x}]")).Data = new[] { 0.0f, 0.0f };
-                            ((TagFieldElementArraySingle)decalFile.SelectField($"Block:decals[{x}]/RealBounds:radius")).Data = new[] { 1.0f, 1.0f };
+                            TagPath diffusePath = ((TagFieldReference)decalFile.SelectField($"Block:decals[{x}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path;
+                            using (TagFile diffuseTag = new TagFile(diffusePath))
+                            {
+                                long width = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:width")).Data;
+                                long height = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:height")).Data;
+
+                                if (height == width)
+                                {
+                                    // Bitmap is square, apply 1.0 radius
+                                    ((TagFieldElementArraySingle)decalFile.SelectField($"Block:decals[{x}]/RealBounds:radius")).Data = new[] { 1.0f, 1.0f };
+                                }
+                            }
+
+                            ((TagFieldElementArraySingle)decalFile.SelectField($"RealPoint2d:decal scale override[{x}]")).Data = decalShader.scaleXY;
                         }
                         
                         i++;

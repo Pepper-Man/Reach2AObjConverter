@@ -765,6 +765,7 @@ namespace Reach2AObjConverter
                         {
                             long width = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:width")).Data;
                             long height = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:height")).Data;
+                            // Assume bitmap is square until proven otherwise
                             float scaleX = 1;
                             float scaleY = 1;
 

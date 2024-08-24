@@ -694,83 +694,62 @@ namespace JsonTo2AScenario
                     {
                         ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).RemoveAllElements();
 
-                        // Set material shader based on present bitmaps
-                        if (decalShader.baseRef != null && decalShader.alphaRef == null && decalShader.bumpRef == null)
+                        // Determine which shader to use based on the presence of bitmaps
+                        string shaderPath = GetShaderPath();
+                        Console.WriteLine($"\t\tUsing {shaderPath} material shader");
+
+                        // Set the material shader path
+                        TagPath matShader = TagPath.FromPathAndExtension($"shaders\\material_shaders\\pepper\\{shaderPath}", "material_shader");
+                        ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = matShader;
+
+                        // Set the base map
+                        AddMaterialParameter("color_map", decalShader.baseRef);
+
+                        // Set the alpha map if available
+                        if (decalShader.alphaRef != null)
                         {
-                            // Only base map
-                            Console.WriteLine("\t\tUsing base-only material shader");
-                            TagPath baseMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\pepper\\decal_base", "material_shader");
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseMatShader;
-
-                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
-                        }
-                        else if (decalShader.baseRef != null && decalShader.alphaRef != null && decalShader.bumpRef == null)
-                        {
-                            // Base + alpha map
-                            Console.WriteLine("\t\tUsing base+alpha material shader");
-                            TagPath baseAlphaMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\pepper\\decal_base_alpha", "material_shader");
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseAlphaMatShader;
-
-                            // Base map
-                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
-
-                            // Alpha map
-                            TagPath alphaMap = TagPath.FromPathAndExtension(decalShader.alphaRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/StringID:parameter name")).Data = "alpha_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/Reference:bitmap")).Path = alphaMap;
-                        }
-                        else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef == null)
-                        {
-                            // Base + bump map
-                            Console.WriteLine("\t\tUsing base+bump material shader");
-                            TagPath baseNormalMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\pepper\\decal_base_normal", "material_shader");
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseNormalMatShader;
-
-                            // Base map
-                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
-
-                            // Bump map
-                            TagPath bumpMap = TagPath.FromPathAndExtension(decalShader.bumpRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/StringID:parameter name")).Data = "normal_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/Reference:bitmap")).Path = bumpMap;
-                        }
-                        else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef != null)
-                        {
-                            // Base + alpha map + bump map
-                            Console.WriteLine("\t\tUsing base+alpha+bump material shader");
-                            TagPath baseNormalAlphaMatShader = TagPath.FromPathAndExtension("shaders\\material_shaders\\pepper\\decal_base_alpha_normal", "material_shader");
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Reference:material shader")).Path = baseNormalAlphaMatShader;
-
-                            // Base map
-                            TagPath baseMap = TagPath.FromPathAndExtension(decalShader.baseRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/StringID:parameter name")).Data = "color_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[0]/Reference:bitmap")).Path = baseMap;
-
-                            // Alpha map
-                            TagPath alphaMap = TagPath.FromPathAndExtension(decalShader.alphaRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/StringID:parameter name")).Data = "alpha_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[1]/Reference:bitmap")).Path = alphaMap;
-
-                            // Bump map
-                            TagPath bumpMap = TagPath.FromPathAndExtension(decalShader.bumpRef, "bitmap");
-                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
-                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[2]/StringID:parameter name")).Data = "normal_map";
-                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[2]/Reference:bitmap")).Path = bumpMap;
+                            AddMaterialParameter("alpha_map", decalShader.alphaRef);
                         }
 
+                        // Set the bump map if available
+                        if (decalShader.bumpRef != null)
+                        {
+                            AddMaterialParameter("normal_map", decalShader.bumpRef);
+                        }
+
+                        string GetShaderPath()
+                        {
+                            if (decalShader.baseRef != null && decalShader.alphaRef == null && decalShader.bumpRef == null)
+                            {
+                                return "decal_base";
+                            }
+                            else if (decalShader.baseRef != null && decalShader.alphaRef != null && decalShader.bumpRef == null)
+                            {
+                                return "decal_base_alpha";
+                            }
+                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef == null)
+                            {
+                                return "decal_base_normal";
+                            }
+                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef != null)
+                            {
+                                return "decal_base_alpha_normal";
+                            }
+
+                            return "invalid";
+                        }
+
+                        void AddMaterialParameter(string parameterName, string bitmapPath)
+                        {
+                            if (bitmapPath == null) return;
+
+                            TagPath map = TagPath.FromPathAndExtension(bitmapPath, "bitmap");
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            int paramIndex = ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).Elements.Count - 1;
+
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/StringID:parameter name")).Data = parameterName;
+                            ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/Reference:bitmap")).Path = map;
+                        }
 
                         // Set blend mode
                         ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/CharEnum:alpha blend mode")).Value = (int)decalShader.blendMode;

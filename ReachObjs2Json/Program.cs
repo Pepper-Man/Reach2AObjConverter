@@ -23,6 +23,7 @@ namespace Reach2AObjConverter
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
                 public float[] scaleXY { get; set; }
+                public float[] radius { get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -723,7 +724,7 @@ namespace Reach2AObjConverter
                     // Get tinting setting
                     long tintType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[5]/ShortInteger:short")).Data;
 
-                    // Determine if shader is u 
+                    // Determine if shader is using bump mapping
                     bool shaderHasBump = false;
                     if (((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[4]/ShortInteger:short")).Data != 0)
                     {
@@ -798,6 +799,9 @@ namespace Reach2AObjConverter
                             decalSettings.scaleXY = new float[] { scaleX, scaleY };
                         }
                     }
+
+                    // Get radius
+                    decalSettings.radius = ((TagFieldElementArraySingle)decalFile.SelectField($"Block:decals[{i}]/RealBounds:radius")).Data;
 
                     allDecalSettings.Add(decalSettings);
                 }

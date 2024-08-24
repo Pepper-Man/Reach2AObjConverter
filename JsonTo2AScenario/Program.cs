@@ -23,6 +23,7 @@ namespace JsonTo2AScenario
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
                 public float[] scaleXY { get; set; }
+                public float[] radius {  get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -262,25 +263,25 @@ namespace JsonTo2AScenario
                 Console.WriteLine("--- SCENERY DEFINITIONS ---");
                 SetObjectDefData(tagFile, "scenery", container.sceneryDefinitions, "scenery");
                 Console.WriteLine("\n\n--- SCENERY PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "scenery", container.sceneryPlacements);
+                SetObjectPlaceData(tagFile, "scenery", container.sceneryPlacements, container.sceneryDefinitions);
 
                 // VEHICLES //
                 Console.WriteLine("\n\n--- VEHICLE DEFINITIONS ---");
                 SetObjectDefData(tagFile, "vehicle", container.vehicleDefinitions, "vehicle");
                 Console.WriteLine("\n\n--- VEHICLE PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "vehicles", container.vehiclePlacements);
+                SetObjectPlaceData(tagFile, "vehicles", container.vehiclePlacements, container.vehicleDefinitions);
 
                 // EQUIPMENT //
                 Console.WriteLine("\n\n--- EQUIPMENT DEFINITIONS ---");
                 SetObjectDefData(tagFile, "equipment", container.equipmentDefinitions, "equipment");
                 Console.WriteLine("\n\n--- EQUIPMENT PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "equipment", container.equipmentPlacements);
+                SetObjectPlaceData(tagFile, "equipment", container.equipmentPlacements, container.equipmentDefinitions);
 
                 // SOUND SCENERY //
                 Console.WriteLine("\n\n--- SOUND SCENERY DEFINITIONS ---");
                 SetObjectDefData(tagFile, "sound scenery", container.soundscenDefinitions, "sound_scenery");
                 Console.WriteLine("\n\n--- SOUND SCENERY PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "sound scenery", container.soundscenPlacements);
+                SetObjectPlaceData(tagFile, "sound scenery", container.soundscenPlacements, container.soundscenDefinitions);
                 
                 // TRIGGER VOLUMES //
                 Console.WriteLine("\n\n--- TRIGGER VOLUMES ---");
@@ -290,19 +291,19 @@ namespace JsonTo2AScenario
                 Console.WriteLine("\n\n--- CRATE DEFINITIONS ---");
                 SetObjectDefData(tagFile, "crate", container.crateDefinitions, "crate");
                 Console.WriteLine("\n\n--- CRATE PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "crates", container.cratePlacements);
+                SetObjectPlaceData(tagFile, "crates", container.cratePlacements, container.crateDefinitions);
 
                 // DECALS //
                 Console.WriteLine("\n\n--- DECAL DEFINITIONS ---");
                 SetObjectDefData(tagFile, "decal", container.decalDefinitions, "decal_system");
                 Console.WriteLine("\n\n--- DECAL PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "decals", container.decalPlacements);
+                SetObjectPlaceData(tagFile, "decals", container.decalPlacements, container.decalDefinitions);
 
                 // WEAPONS //
                 Console.WriteLine("\n\n--- WEAPON DEFINITIONS ---");
                 SetObjectDefData(tagFile, "weapon", container.weaponDefinitions, "weapon");
                 Console.WriteLine("\n\n--- WEAPON PLACEMENTS ---");
-                SetObjectPlaceData(tagFile, "weapons", container.weaponPlacements);
+                SetObjectPlaceData(tagFile, "weapons", container.weaponPlacements, container.weaponDefinitions);
             }
             catch
             {
@@ -432,7 +433,7 @@ namespace JsonTo2AScenario
             }
         }
     
-        public static void SetObjectPlaceData(TagFile tagFile, string objectType, List<ObjectPlacement> objPlacements)
+        public static void SetObjectPlaceData(TagFile tagFile, string objectType, List<ObjectPlacement> objPlacements, List<ObjectDefinition> objDefinitions)
         {
             // Convert object type string to enum value
             Dictionary<string, int> objTypeMapping = new Dictionary<string, int>()
@@ -581,8 +582,9 @@ namespace JsonTo2AScenario
                     // Get default scaling data from decal system tag
                     TagPath decalSystem = ((TagFieldReference)tagFile.SelectField($"Block:decal palette[{obj.typeIndex}]/Reference:reference")).Path;
 
-                    ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
-                    Console.WriteLine($"\tScale Y: {obj.scaleY}");
+                    //((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
+                    //Console.WriteLine($"\tScale Y: {obj.scaleY}");
+
                     try
                     {
                         using (TagFile decSysTag = new TagFile(decalSystem))
@@ -605,6 +607,31 @@ namespace JsonTo2AScenario
 
                                 ((TagFieldElementSingle)tagFile.SelectField($"Block:{objectType}[{i}]/Real:scale y")).Data = obj.scaleY;
                                 Console.WriteLine($"\tScale Y: {obj.scaleY}");
+                            }
+
+                            Console.WriteLine($"Reach scale X:{obj.scaleX} Y:{obj.scaleY}");
+
+                            int decalsCount = ((TagFieldBlock)decSysTag.SelectField($"Block:decals")).Elements.Count;
+                            if ((obj.scaleX == 1.0f || obj.scaleX == 0.0f) && (obj.scaleY == 1.0f || obj.scaleY == 0.0f))
+                            {
+                                Console.WriteLine("Setting decal system radius back to reach value");
+                                // Decal placement scaling is 0 or 1, thus we need to revert decal system radius back to JSON value
+                                float[] radiusValues = objDefinitions[obj.typeIndex].decalSettings[0].radius;
+                                for (int x = 0; x < decalsCount; x++)
+                                {
+                                    ((TagFieldElementArraySingle)decSysTag.SelectField($"Block:decals[{x}]/RealBounds:radius")).Data = radiusValues;
+                                    decSysTag.Save();
+                                }
+                            }
+                            else
+                            {
+                                // Otherwise set decal system radius to 1
+                                Console.WriteLine("Setting decal system scale to 1");
+                                for (int x = 0; x < decalsCount; x++)
+                                {
+                                    ((TagFieldElementArraySingle)decSysTag.SelectField($"Block:decals[{x}]/RealBounds:radius")).Data = new[] { 1.0f, 1.0f };
+                                    decSysTag.Save();
+                                }
                             }
                         }
                     }
@@ -717,6 +744,7 @@ namespace JsonTo2AScenario
                             AddMaterialParameter("normal_map", decalShader.bumpRef);
                         }
 
+                        // This is quite nasty but is pretty much the only way to determine which mat shader to use
                         string GetShaderPath()
                         {
                             if (decalShader.baseRef != null && decalShader.alphaRef == null && decalShader.bumpRef == null)
@@ -735,10 +763,11 @@ namespace JsonTo2AScenario
                             {
                                 return "decal_base_alpha_normal";
                             }
-
+                            Console.WriteLine("\t\tFailed to determine material shader for decal system");
                             return "invalid";
                         }
 
+                        // This function handles all the managedblam side of things for adding bitmap references
                         void AddMaterialParameter(string parameterName, string bitmapPath)
                         {
                             if (bitmapPath == null) return;
@@ -764,12 +793,13 @@ namespace JsonTo2AScenario
                             {
                                 long width = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:width")).Data;
                                 long height = ((TagFieldElementInteger)diffuseTag.SelectField($"Block:bitmaps[0]/ShortInteger:height")).Data;
-
+                                /*
                                 if (height == width)
                                 {
                                     // Bitmap is square, apply 1.0 radius
                                     ((TagFieldElementArraySingle)decalFile.SelectField($"Block:decals[{x}]/RealBounds:radius")).Data = new[] { 1.0f, 1.0f };
                                 }
+                                */
                             }
 
                             ((TagFieldElementArraySingle)decalFile.SelectField($"RealPoint2d:decal scale override[{x}]")).Data = decalShader.scaleXY;

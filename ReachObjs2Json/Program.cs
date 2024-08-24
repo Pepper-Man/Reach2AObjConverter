@@ -19,6 +19,7 @@ namespace Reach2AObjConverter
             {
                 public string baseRef { get; set; }
                 public string alphaRef { get; set; }
+                public string bumpRef { get; set; }
                 public float[] tintColour { get; set; }
                 public long blendMode { get; set; }
                 public float[] scaleXY { get; set; }
@@ -722,6 +723,13 @@ namespace Reach2AObjConverter
                     // Get tinting setting
                     long tintType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[5]/ShortInteger:short")).Data;
 
+                    // Determine if shader is u 
+                    bool shaderHasBump = false;
+                    if (((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[4]/ShortInteger:short")).Data != 0)
+                    {
+                        shaderHasBump = true;
+                    }
+
                     for (int j = 0; j < paramCount; j++)
                     {
                         string paramName = ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/StringID:parameter name")).Data;
@@ -747,6 +755,13 @@ namespace Reach2AObjConverter
                             float[] colours = { colourData.Red, colourData.Green, colourData.Blue };
                             Console.WriteLine($"\t\tTint colour: {colours[0]}, {colours[1]}, {colours[2]}");
                             decalSettings.tintColour= colours;
+                        }
+                        else if (paramName == "bump_map" && shaderHasBump)
+                        {
+                            // Bump map, only get data if shader is currently set to use bump mapping
+                            string bumpMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
+                            Console.WriteLine($"\t\tBump map: {bumpMap}");
+                            decalSettings.bumpRef = bumpMap;
                         }
                         else
                         {

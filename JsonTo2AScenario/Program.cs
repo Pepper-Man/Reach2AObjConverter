@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Corinth;
+using Corinth.Game;
 using Corinth.Tags;
 
 namespace JsonTo2AScenario
@@ -21,6 +23,8 @@ namespace JsonTo2AScenario
                 public string alphaRef { get; set; }
                 public string bumpRef { get; set; }
                 public float[] tintColour { get; set; }
+                public float tintIntensity { get; set; }
+                public float modulation { get; set; }
                 public long blendMode { get; set; }
                 public float[] scaleXY { get; set; }
                 public float[] radius {  get; set; }
@@ -803,6 +807,39 @@ namespace JsonTo2AScenario
                             }
 
                             ((TagFieldElementArraySingle)decalFile.SelectField($"RealPoint2d:decal scale override[{x}]")).Data = decalShader.scaleXY;
+                        }
+
+                        // Set colour tinting data, if said data is present
+                        if (decalShader.tintColour != null)
+                        {
+                            int paramIndex = ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).Elements.Count - 1;
+                            if (!decalShader.tintColour.SequenceEqual(new float[] { 1.0f, 1.0f, 1.0f }))
+                            {
+                                // Colour
+                                ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                                paramIndex++;
+                                ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/StringID:parameter name")).Data = "tint_color";
+                                ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/LongEnum:parameter type")).Value = 4;
+
+                                GameColor colour = GameColor.FromRgb(decalShader.tintColour[0], decalShader.tintColour[1], decalShader.tintColour[2]);
+                                ((TagFieldElementArraySingle)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/RealArgbColor:color")).Data = new float[] { 1.0f, colour.Red, colour.Green, colour.Blue };
+                                ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/Block:function parameters")).AddElement();
+                                ((TagFieldCustomFunctionEditor)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/Block:function parameters[0]/Custom:function")).Value.SetColor(0, colour);
+                                Console.WriteLine($"\t\tTint colour: {colour.Red}, {colour.Green}, {colour.Blue}");
+                            }
+                            // Tint intensity
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            paramIndex++;
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/StringID:parameter name")).Data = "tint_intensity";
+                            ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/LongEnum:parameter type")).Value = 1;
+                            ((TagFieldElementSingle)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/Real:real")).Data = decalShader.tintIntensity;
+
+                            // Tint modulation
+                            ((TagFieldBlock)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters")).AddElement();
+                            paramIndex++;
+                            ((TagFieldElementStringID)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/StringID:parameter name")).Data = "tint_modulation_factor";
+                            ((TagFieldEnum)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/LongEnum:parameter type")).Value = 1;
+                            ((TagFieldElementSingle)decalFile.SelectField($"Block:decals[{i}]/Struct:actual material?/Block:material parameters[{paramIndex}]/Real:real")).Data = decalShader.modulation;
                         }
                         
                         i++;

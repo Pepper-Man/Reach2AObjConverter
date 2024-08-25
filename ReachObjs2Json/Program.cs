@@ -21,6 +21,8 @@ namespace Reach2AObjConverter
                 public string alphaRef { get; set; }
                 public string bumpRef { get; set; }
                 public float[] tintColour { get; set; }
+                public float tintIntensity { get; set; }
+                public float modulation { get; set; }
                 public long blendMode { get; set; }
                 public float[] scaleXY { get; set; }
                 public float[] radius { get; set; }
@@ -757,6 +759,20 @@ namespace Reach2AObjConverter
                             Console.WriteLine($"\t\tTint colour: {colours[0]}, {colours[1]}, {colours[2]}");
                             decalSettings.tintColour= colours;
                         }
+                        else if (paramName == "intensity" && tintType != 0)
+                        {
+                            // Tint intensity, only get data if shader is currently using tinting
+                            float intenseData = ((TagFieldCustomFunctionEditor)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Block:animated parameters[0]/Custom:animation function")).Value.ClampRangeMin;
+                            Console.WriteLine($"\t\tTint intensity: {intenseData}");
+                            decalSettings.tintIntensity = intenseData;
+                        }
+                        else if (paramName == "modulation_factor" && tintType != 0)
+                        {
+                            // Tint modulation, only get data if shader is currently using tinting
+                            float modulData = ((TagFieldCustomFunctionEditor)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Block:animated parameters[0]/Custom:animation function")).Value.ClampRangeMin;
+                            Console.WriteLine($"\t\tTint modulation: {modulData}");
+                            decalSettings.modulation = modulData;
+                        }
                         else if (paramName == "bump_map" && shaderHasBump)
                         {
                             // Bump map, only get data if shader is currently set to use bump mapping
@@ -767,7 +783,7 @@ namespace Reach2AObjConverter
                         else
                         {
                             // Dunno
-                            Console.WriteLine("\tUnused paramter, ignore");
+                            Console.WriteLine("\t\tUnused paramter, ignore");
                             continue;
                         }
                     }

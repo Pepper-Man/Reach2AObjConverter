@@ -743,7 +743,7 @@ namespace JsonTo2AScenario
                         }
 
                         // Set the bump map if available
-                        if (decalShader.bumpRef != null)
+                        if (decalShader.bumpRef != null && decalShader.blendMode != 2)
                         {
                             AddMaterialParameter("normal_map", decalShader.bumpRef);
                         }
@@ -761,11 +761,28 @@ namespace JsonTo2AScenario
                             }
                             else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef == null)
                             {
-                                return "decal_base_normal";
+                                // Decals using multiply blend are broken when using normal mapping, so disable
+                                if (decalShader.blendMode != 2)
+                                {
+                                    return "decal_base_normal";
+                                }
+                                else
+                                {
+                                    return "decal_base";
+                                }
+                                
                             }
                             else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef != null)
                             {
-                                return "decal_base_alpha_normal";
+                                // Same here
+                                if (decalShader.blendMode != 2)
+                                {
+                                    return "decal_base_alpha_normal";
+                                }
+                                else
+                                {
+                                    return "decal_base_alpha";
+                                }  
                             }
                             Console.WriteLine("\t\tFailed to determine material shader for decal system");
                             return "invalid";

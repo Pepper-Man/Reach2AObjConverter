@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Corinth;
 using Corinth.Game;
@@ -760,33 +759,30 @@ namespace JsonTo2AScenario
                         // This is quite nasty but is pretty much the only way to determine which mat shader to use
                         string GetShaderPath()
                         {
-                            bool IsBase() => decalShader.baseRef != null;
-                            bool IsAlpha() => decalShader.alphaRef != null;
-                            bool IsBump() => decalShader.bumpRef != null;
-                            bool IsVector() => decalShader.vectorRef != null;
-                            bool IsNotAlpha() => decalShader.alphaRef == null;
-                            bool IsNotBump() => decalShader.bumpRef == null;
-                            bool IsNotVector() => decalShader.vectorRef == null;
+                            bool HasBase() => decalShader.baseRef != null;
+                            bool HasAlpha() => decalShader.alphaRef != null;
+                            bool HasBump() => decalShader.bumpRef != null;
+                            bool HasVector() => decalShader.vectorRef != null;
                             bool IsBlendModeNotMultiply() => decalShader.blendMode != 2;
-                            bool IsSpecialAlbedoMode() => decalShader.albedoMode == 8 || decalShader.albedoMode == 9;
+                            bool IsVectorAlbedoMode() => decalShader.albedoMode == 8 || decalShader.albedoMode == 9;
 
-                            if (IsBase() && IsNotAlpha() && IsNotBump() && IsNotVector())
+                            if (HasBase() && !HasAlpha() && !HasBump() && !HasVector())
                             {
                                 return "decal_base";
                             }
-                            else if (IsBase() && IsAlpha() && IsNotBump() && IsNotVector())
+                            else if (HasBase() && HasAlpha() && !HasBump() && !HasVector())
                             {
                                 return "decal_base_alpha";
                             }
-                            else if (IsBase() && IsBump() && IsNotAlpha() && decalShader.bumpMode > 0)
+                            else if (HasBase() && HasBump() && !HasAlpha() && decalShader.bumpMode > 0)
                             {
                                 return IsBlendModeNotMultiply() ? "decal_base_normal" : "decal_base";
                             }
-                            else if (IsBase() && IsBump() && IsAlpha() && decalShader.bumpMode > 0)
+                            else if (HasBase() && HasBump() && HasAlpha() && decalShader.bumpMode > 0)
                             {
                                 return IsBlendModeNotMultiply() ? "decal_base_alpha_normal" : "decal_base_alpha";
                             }
-                            else if (IsBase() && IsVector() && IsSpecialAlbedoMode() && decalShader.bumpMode <= 0)
+                            else if (HasBase() && HasVector() && IsVectorAlbedoMode() && decalShader.bumpMode <= 0)
                             {
                                 return "decal_vector_alpha";
                             }

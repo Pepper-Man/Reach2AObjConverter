@@ -26,6 +26,7 @@ namespace Reach2AObjConverter
                 public float modulation { get; set; }
                 public long blendMode { get; set; }
                 public long albedoMode { get; set; }
+                public long bumpMode { get; set; }
                 public float[] scaleXY { get; set; }
                 public float[] radius { get; set; }
             }
@@ -721,6 +722,10 @@ namespace Reach2AObjConverter
                     // Get albedo setting
                     long albedoType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[0]/ShortInteger:short")).Data;
                     decalSettings.albedoMode = albedoType;
+
+                    // Get bump mode
+                    long bumpType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[4]/ShortInteger:short")).Data;
+                    decalSettings.bumpMode = bumpType;
 
                     // Get blend mode
                     long blendMode = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[1]/ShortInteger:short")).Data;

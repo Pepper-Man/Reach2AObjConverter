@@ -22,12 +22,15 @@ namespace JsonTo2AScenario
                 public string baseRef { get; set; }
                 public string alphaRef { get; set; }
                 public string bumpRef { get; set; }
+                public string vectorRef { get; set; }
                 public float[] tintColour { get; set; }
                 public float tintIntensity { get; set; }
                 public float modulation { get; set; }
                 public long blendMode { get; set; }
+                public long albedoMode { get; set; }
+                public long bumpMode { get; set; }
                 public float[] scaleXY { get; set; }
-                public float[] radius {  get; set; }
+                public float[] radius { get; set; }
             }
 
             public List<DecalSettings> decalSettings { get; set; }
@@ -748,18 +751,24 @@ namespace JsonTo2AScenario
                             AddMaterialParameter("normal_map", decalShader.bumpRef);
                         }
 
+                        // Set vector map if available
+                        if (decalShader.vectorRef != null && (decalShader.albedoMode == 8 || decalShader.albedoMode == 9))
+                        {
+                            AddMaterialParameter("vector_map", decalShader.vectorRef);
+                        }
+
                         // This is quite nasty but is pretty much the only way to determine which mat shader to use
                         string GetShaderPath()
                         {
-                            if (decalShader.baseRef != null && decalShader.alphaRef == null && decalShader.bumpRef == null)
+                            if (decalShader.baseRef != null && decalShader.alphaRef == null && decalShader.bumpRef == null && decalShader.vectorRef == null)
                             {
                                 return "decal_base";
                             }
-                            else if (decalShader.baseRef != null && decalShader.alphaRef != null && decalShader.bumpRef == null)
+                            else if (decalShader.baseRef != null && decalShader.alphaRef != null && decalShader.bumpRef == null && decalShader.vectorRef == null)
                             {
                                 return "decal_base_alpha";
                             }
-                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef == null)
+                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef == null && decalShader.bumpMode > 0)
                             {
                                 // Decals using multiply blend are broken when using normal mapping, so disable
                                 if (decalShader.blendMode != 2)
@@ -772,7 +781,7 @@ namespace JsonTo2AScenario
                                 }
                                 
                             }
-                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef != null)
+                            else if (decalShader.baseRef != null && decalShader.bumpRef != null && decalShader.alphaRef != null && decalShader.bumpMode > 0)
                             {
                                 // Same here
                                 if (decalShader.blendMode != 2)
@@ -783,6 +792,10 @@ namespace JsonTo2AScenario
                                 {
                                     return "decal_base_alpha";
                                 }  
+                            }
+                            else if (decalShader.baseRef != null && decalShader.vectorRef != null && (decalShader.albedoMode == 8 || decalShader.albedoMode == 9) && decalShader.bumpMode <= 0)
+                            {
+                                return "decal_vector_alpha";
                             }
                             Console.WriteLine("\t\tFailed to determine material shader for decal system");
                             return "invalid";

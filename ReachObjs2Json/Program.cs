@@ -20,10 +20,12 @@ namespace Reach2AObjConverter
                 public string baseRef { get; set; }
                 public string alphaRef { get; set; }
                 public string bumpRef { get; set; }
+                public string vectorRef { get; set; }
                 public float[] tintColour { get; set; }
                 public float tintIntensity { get; set; }
                 public float modulation { get; set; }
                 public long blendMode { get; set; }
+                public long albedoMode { get; set; }
                 public float[] scaleXY { get; set; }
                 public float[] radius { get; set; }
             }
@@ -718,6 +720,7 @@ namespace Reach2AObjConverter
 
                     // Get albedo setting
                     long albedoType = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[0]/ShortInteger:short")).Data;
+                    decalSettings.albedoMode = albedoType;
 
                     // Get blend mode
                     long blendMode = ((TagFieldElementInteger)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:options[1]/ShortInteger:short")).Data;
@@ -779,6 +782,13 @@ namespace Reach2AObjConverter
                             string bumpMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
                             Console.WriteLine($"\t\tBump map: {bumpMap}");
                             decalSettings.bumpRef = bumpMap;
+                        }
+                        else if (paramName == "vector_map" && (albedoType == 8 || albedoType == 9))
+                        {
+                            // Vector map
+                            string vectorMap = ((TagFieldReference)decalFile.SelectField($"Block:decals[{i}]/Struct:actual shader?/Block:parameters[{j}]/Reference:bitmap")).Path.RelativePath;
+                            Console.WriteLine($"\t\tVector map: {vectorMap}");
+                            decalSettings.vectorRef = vectorMap;
                         }
                         else
                         {
